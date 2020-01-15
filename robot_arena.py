@@ -15,7 +15,7 @@ class Team:
             / len(self.robots)))
         self.spd_average = float("{:.2f}".format(sum((
             robot.weapon.speed for robot in self.robots))
-            / len(self.robots)))            
+            / len(self.robots)))
         self.total_power = sum((robot.weapon.power for robot in self.robots))
         self.powerlevel = int("{:.0f}".format(
             (self.total_power * self.acc_average * len(self.robots)) / 3))
@@ -49,11 +49,12 @@ class Team:
                        self.total_hp,
                        self.powerlevel)]
 
-        print(tabulate(team_table, headers=['TotalPower',
-                                            'AccAvg',
-                                            'SpdAvg',
-                                            'TotalHP',
-                                            'Powerlevel'], tablefmt="fancy_grid"))
+        print(tabulate(team_table, 
+                       headers=['TotalPower',
+                                'AccAvg',
+                                'SpdAvg',
+                                'TotalHP',
+                                'Powerlevel'], tablefmt="fancy_grid"))
 
 
 class Battlefield:
@@ -62,11 +63,9 @@ class Battlefield:
         self.teams = []
         self.teams.extend((team1, team2))
 
-
     def spread_teams(self):
         self.distance = random.randint(1, 10)
         print(f'The distance betweeen teams is {self.distance}')
-
 
     def miss_or_hit(self, robot, weapon_acc, distance):
         if (weapon_acc / distance / random.random()) >= 0.5:
@@ -76,17 +75,21 @@ class Battlefield:
 
     def resolve_damage(self, robot, target):
         initial_damage = int(robot.weapon.power * random.uniform(0.9, 1.1))
-        critical = True if (float("{:.2f}".format(random.random()))) >= 0.9 else False
-        initial_damage = int(initial_damage * 1.5) if critical is True else initial_damage
+        critical = True if (
+            float("{:.2f}".format(random.random()))) >= 0.9 else False
+        initial_damage = int(
+            initial_damage * 1.5) if critical is True else initial_damage
         final_damage = max(initial_damage - target.armor, 0)
-        
+
         if critical is True:
-            print(f'Critical Hit!', end = " ")
+            print(f'Critical Hit!', end=" ")
 
         if final_damage == 0:
-            print(f'The shot from {robot.name} hits, but was resisted!', end = " ")
+            print(f'The shot from {robot.name} hits, but was resisted!',
+                  end=" ")
         else:
-            print(f"It hits {target.name} for {final_damage} damage ({initial_damage} - {target.armor}).", end = " ")
+            print(f"It hits {target.name} for {final_damage} damage"
+                  f" ({initial_damage} - {target.armor}).", end=" ")
 
         target.hp -= final_damage
 
@@ -96,7 +99,7 @@ class Battlefield:
 
         round
         print(f'\n###### Starting round {round} ######\n')
-        
+
         random.shuffle(self.teams)
 
         for index, team in enumerate(self.teams):
@@ -106,42 +109,47 @@ class Battlefield:
 
                 if robot.alive is False:
                     continue
-                
-                if any(robot.alive for robot in self.teams[index -1].robots):
-                    target = random.choice(list(robot for robot in self.teams[index -1].robots if robot.alive is True))
+
+                if any(robot.alive for robot in self.teams[index - 1].robots):
+                    target = random.choice(
+                             list(
+                              robot for robot in self.teams[index - 1].robots
+                              if robot.alive is True))
                 else:
                     print(f'{robot.name} has no more targets')
                     continue
 
                 if robot.cooldown <= 0:
-                    print(f'{robot.name} fires at {target.name}', end= "... ")
+                    print(f'{robot.name} fires at {target.name}', end="... ")
                     robot.cooldown = 5 - robot.weapon.speed
                     hit = self.miss_or_hit(robot,
-                                        robot.weapon.accuracy,
-                                        self.distance)
+                                           robot.weapon.accuracy,
+                                           self.distance)
                     if hit == 0:
                         print(f'{robot.name} misses.')
                         continue
 
                     self.resolve_damage(robot, target)
 
-                    if target.hp <=0:
+                    if target.hp <= 0:
                         target.hp = 0
                         target.alive = False
                         print(f'{target.name} was destroyed!')
                     else:
                         print(f'{target.hp} HP remains!')
-                    
+
                 else:
-                    print(f"{robot.name}'s weapon is cooling down, {robot.cooldown} turns remaining.")
+                    print(f"{robot.name}'s weapon is cooling down, "
+                          f"{robot.cooldown} turns remaining.")
                     robot.cooldown -= robot.weapon.speed
-            
+
         for team in self.teams:
             team.total_hp = sum(robot.hp for robot in team.robots)
 
         print(f'\nEnding round {round}')
         for team in self.teams:
-            print(f'{(sum([robot.alive for robot in team.robots]))} robots on team {team.color} survived')
+            print(f'{(sum([robot.alive for robot in team.robots]))} robots '
+                  f'on team {team.color} survived')
         input("Press Enter to continue...")
 
     def resolve_battle(self):
@@ -166,6 +174,7 @@ class Battlefield:
                 winning_team = team.color
 
         print(f'\n{winning_team} wins!')
+
 
 if __name__ == '__main__':
 
