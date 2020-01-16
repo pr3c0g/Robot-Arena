@@ -6,7 +6,8 @@ from tabulate import tabulate
 
 class Team:
 
-    def __init__(self, color, size):
+    def __init__(self, player=False, color, size):
+
         self.color = color
         self.robots = {Robot() for _ in range(size)}
         self.total_hp = sum(robot.hp for robot in self.robots)
@@ -20,7 +21,7 @@ class Team:
         self.powerlevel = int("{:.0f}".format(
             (self.total_power * self.acc_average * len(self.robots)) / 3))
 
-    def describe(self):    
+    def describe(self):
 
         print(f'\n{self.color} Team, {len(self.robots)} robots:')
         robots_table = []
@@ -35,7 +36,7 @@ class Team:
                                  robot.weapon.speed))
 
         print(tabulate(robots_table, headers=['Name',
-                                              'Type', 
+                                              'Type',
                                               'HP',
                                               'Armor',
                                               'Weapon',
@@ -43,13 +44,13 @@ class Team:
                                               'Accuracy',
                                               'Speed'], tablefmt="fancy_grid"))
 
-        team_table = [(self.total_power, 
+        team_table = [(self.total_power,
                        self.acc_average,
                        self.spd_average,
                        self.total_hp,
                        self.powerlevel)]
 
-        print(tabulate(team_table, 
+        print(tabulate(team_table,
                        headers=['TotalPower',
                                 'AccAvg',
                                 'SpdAvg',
@@ -179,9 +180,8 @@ class Battlefield:
 if __name__ == '__main__':
 
     red_team = Team("Red", (random.randint(7, 7)))
-    blue_team = Team("Blue", (random.randint(7, 7)))
-
+    player_team = Team(True, team_name, 7)
     red_team.describe()
-    blue_team.describe()
+    player_team.describe()
 
-    Battlefield(red_team, blue_team).resolve_battle()
+    Battlefield(red_team, player_team).resolve_battle()
