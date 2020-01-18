@@ -6,11 +6,12 @@ from weapon_generator import Weapon
 
 class Robot:
 
-    def __init__(self, robot_type=None, weapon_type=None):
+    def __init__(self, team, robot_type=None, weapon_type=None):
         self.type = get_random_robot_type() \
                     if robot_type is None else robot_type
         name_list = open('robot_names.txt').read().splitlines()
         self.name = random.choice(name_list)
+        self.team = team
         self.hp, \
             self.armor, \
             self.weapon_modifiers = globals()["generate_" + self.type]()

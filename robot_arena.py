@@ -1,15 +1,16 @@
 #!/usr/local/opt/python/bin/python3.7
 import random
+import operator
 from robot_generator import Robot
 from tabulate import tabulate
 
 
 class Team:
 
-    def __init__(self, player=False, color, size):
+    def __init__(self, name, size, max_pwrlvl, player=False):
 
-        self.color = color
-        self.robots = {Robot() for _ in range(size)}
+        self.name = name
+        self.robots = [Robot(self.name) for _ in range(int(size))]
         self.total_hp = sum(robot.hp for robot in self.robots)
         self.acc_average = float("{:.2f}".format(sum((
             robot.weapon.accuracy for robot in self.robots))
@@ -19,11 +20,11 @@ class Team:
             / len(self.robots)))
         self.total_power = sum((robot.weapon.power for robot in self.robots))
         self.powerlevel = int("{:.0f}".format(
-            (self.total_power * self.acc_average * len(self.robots)) / 3))
+            self.total_power * self.acc_average * self.spd_average / 10))
 
     def describe(self):
 
-        print(f'\n{self.color} Team, {len(self.robots)} robots:')
+        print(f'\n{self.name} Team, {len(self.robots)} robots:')
         robots_table = []
         for robot in self.robots:
             robots_table.append((robot.name,
@@ -96,53 +97,47 @@ class Battlefield:
 
         return
 
-    def resolve_turn(self, round):
+    def resolve_turn(self, round, robots):
 
-        round
-        print(f'\n###### Starting round {round} ######\n')
+        print(f'\n###### TURNS V2 - Starting round {round} ######\n')
 
-        random.shuffle(self.teams)
+        for robot in robots:
 
-        for index, team in enumerate(self.teams):
-            print(f'\n{team.color} team turn!\n')
+            if robot.alive is False:
+                continue
+            target_team = 0 if robot.team == "Blue" else 1
+            if any(robot.alive for robot in self.teams[target_team].robots):
+                target = random.choice(list(
+                            robot for robot in self.teams[target_team].robots
+                            if robot.alive is True))
+            else:
+                print(f'{robot.team} has no more targets')
+                continue
 
-            for robot in team.robots:
-
-                if robot.alive is False:
+            if robot.cooldown <= 0:
+                print(f"{robot.team}: {robot.name} fires at {target.name}",
+                      end="... ")
+                robot.cooldown = 5 - robot.weapon.speed
+                hit = self.miss_or_hit(robot,
+                                       robot.weapon.accuracy,
+                                       self.distance)
+                if hit == 0:
+                    print(f'{robot.name} misses.')
                     continue
 
-                if any(robot.alive for robot in self.teams[index - 1].robots):
-                    target = random.choice(
-                             list(
-                              robot for robot in self.teams[index - 1].robots
-                              if robot.alive is True))
+                self.resolve_damage(robot, target)
+
+                if target.hp <= 0:
+                    target.hp = 0
+                    target.alive = False
+                    print(f'{target.name} was destroyed!')
                 else:
-                    print(f'{robot.name} has no more targets')
-                    continue
+                    print(f'{target.hp} HP remains!')
 
-                if robot.cooldown <= 0:
-                    print(f'{robot.name} fires at {target.name}', end="... ")
-                    robot.cooldown = 5 - robot.weapon.speed
-                    hit = self.miss_or_hit(robot,
-                                           robot.weapon.accuracy,
-                                           self.distance)
-                    if hit == 0:
-                        print(f'{robot.name} misses.')
-                        continue
-
-                    self.resolve_damage(robot, target)
-
-                    if target.hp <= 0:
-                        target.hp = 0
-                        target.alive = False
-                        print(f'{target.name} was destroyed!')
-                    else:
-                        print(f'{target.hp} HP remains!')
-
-                else:
-                    print(f"{robot.name}'s weapon is cooling down, "
-                          f"{robot.cooldown} turns remaining.")
-                    robot.cooldown -= robot.weapon.speed
+            else:
+                print(f"{robot.team}: {robot.name}'s weapon is cooling down, "
+                      f"{robot.cooldown} turns remaining.")
+                robot.cooldown -= 1
 
         for team in self.teams:
             team.total_hp = sum(robot.hp for robot in team.robots)
@@ -150,16 +145,20 @@ class Battlefield:
         print(f'\nEnding round {round}')
         for team in self.teams:
             print(f'{(sum([robot.alive for robot in team.robots]))} robots '
-                  f'on team {team.color} survived')
+                  f'on team {team.name} survived')
         input("Press Enter to continue...")
 
     def resolve_battle(self):
         print(f'\nStarting battle!')
         self.spread_teams()
+        robots_by_speed = sorted(
+            (self.teams[1].robots + self.teams[0].robots),
+            reverse=True,
+            key=operator.attrgetter('weapon.speed'))
         round = 1
 
         while all(team.total_hp > 0 for team in self.teams):
-            self.resolve_turn(round)
+            self.resolve_turn_v2(round, robots_by_speed)
             round += 1
 
         if all(team.total_hp <= 0 for team in self.teams):
@@ -169,19 +168,34 @@ class Battlefield:
         winning_team = None
         winner = 0
         for team in self.teams:
-            print(f'{team.color} finished with {team.total_hp} HP remaining!')
+            print(f'{team.name} finished with {team.total_hp} HP remaining!')
             if team.total_hp > winner:
                 winner = team.total_hp
-                winning_team = team.color
+                winning_team = team.name
 
         print(f'\n{winning_team} wins!')
 
 
 if __name__ == '__main__':
 
-    red_team = Team("Red", (random.randint(7, 7)))
-    player_team = Team(True, team_name, 7)
-    red_team.describe()
-    player_team.describe()
+    # Define battle parameters
+    # max_pwrlvl = input(f'What is the max powerlevel per team? ')
+    # team_size = input(f'What is the number of robots per team? ')
+    max_pwrlvl = 100
+    team_size = 10
 
-    Battlefield(red_team, player_team).resolve_battle()
+    # Create player team based on input
+    # player_team_name = input(f"What's the team name? ")
+    # player_team = Team(player_team_name, team_size, max_pwrlvl, True)
+
+    # Create AI team
+    red_team = Team("Red", team_size, max_pwrlvl, False)
+    blue_team = Team("Blue", team_size, max_pwrlvl, False)
+
+    # Pre battle start
+    red_team.describe()
+    blue_team.describe()
+    # player_team.describe()
+
+    # Battle
+    Battlefield(red_team, blue_team).resolve_battle()
