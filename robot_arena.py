@@ -21,7 +21,19 @@ class Team:
     def __init__(self, name, size, max_pwrlvl, player=False):
 
         self.name = name
-        self.robots = [Robot(self.name) for _ in range(int(size))]
+
+        if player is False:
+            self.robots = [Robot(self.name) for _ in range(int(size))]
+        else:
+            self.robots = []
+            for _ in range(size):
+                robot_type = input("Pick robot type: "
+                                   + "0:tank, 1:assault, 2:support, 3:gunner) ")
+                weapon_type = input("Pick weapon type: "
+                                    + "0:rifle, 1:sniper, 2:cannon, 3:handgun) ")
+                self.robots.append(Robot(self.name, robot_type, weapon_type))
+                print(f'Creating robot {_}: {self.robots[_].name}\n')
+
         self.total_hp = sum(robot.hp for robot in self.robots)
         self.acc_average = float("{:.2f}".format(sum((
             robot.weapon.accuracy for robot in self.robots))
@@ -205,29 +217,30 @@ class Battlefield:
                 winner = team.total_hp
                 winning_team = team.name
 
-        print(f'\n{winning_team} wins!')
+        print(f'{getattr(colors, winning_team)}\n{winning_team}{colors.endc}'
+              f' wins!')
 
 
 if __name__ == '__main__':
 
     # Define battle parameters
     # max_pwrlvl = input(f'What is the max powerlevel per team? ')
-    # team_size = input(f'What is the number of robots per team? ')
     max_pwrlvl = 100
-    team_size = 10
+    team_size = int(input(f'What is the number of robots per team? '))
 
     # Create player team based on input
-    # player_team_name = input(f"What's the team name? ")
-    # player_team = Team(player_team_name, team_size, max_pwrlvl, True)
+    # player_team_name = input(f"What's the team color? ")
+    player_team_name = "Blue"
+    player_team = Team(player_team_name, team_size, max_pwrlvl, True)
 
     # Create AI team
     red_team = Team("Red", team_size, max_pwrlvl, False)
-    blue_team = Team("Blue", team_size, max_pwrlvl, False)
+    # blue_team = Team("Blue", team_size, max_pwrlvl, False)
 
     # Pre battle start
     red_team.describe()
-    blue_team.describe()
-    # player_team.describe()
+    # blue_team.describe()
+    player_team.describe()
 
     # Battle
-    Battlefield(red_team, blue_team).resolve_battle()
+    Battlefield(red_team, player_team).resolve_battle()

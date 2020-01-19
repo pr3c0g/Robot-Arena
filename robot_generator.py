@@ -2,19 +2,25 @@
 import random
 from tabulate import tabulate
 from weapon_generator import Weapon
+robot_map = {0: 'tank',
+             1: 'assault',
+             2: 'support',
+             3: 'gunner'}
 
 
 class Robot:
 
     def __init__(self, team, robot_type=None, weapon_type=None):
         self.type = get_random_robot_type() \
-                    if robot_type is None else robot_type
-        name_list = open('robot_names.txt').read().splitlines()
-        self.name = random.choice(name_list)
-        self.team = team
+                    if robot_type is None else robot_map[int(robot_type)]
+
         self.hp, \
             self.armor, \
             self.weapon_modifiers = globals()["generate_" + self.type]()
+
+        name_list = open('robot_names.txt').read().splitlines()
+        self.name = random.choice(name_list)
+        self.team = team
         self.weapon = Weapon() if weapon_type is None else Weapon(weapon_type)
         self.weapon.power, \
             self.weapon.accuracy, \
@@ -58,13 +64,11 @@ class Robot:
 
 
 def get_random_robot_type():
-    robot_type = ['tank', 'assault', 'support', 'gunner']
-
-    return random.choice(robot_type)
+    return robot_map[random.randint(0, 3)]
 
 
 def generate_tank():
-    hp = random.randint(75, 85)
+    hp = random.randint(70, 80)
     armor = 3
     weapon_modifiers = {"wpn_pwr_mod": 2,
                         "wpn_spd_mod": -1,
@@ -104,4 +108,5 @@ def generate_support():
 
 
 if __name__ == '__main__':
-    Robot("tank", "cannon")._describe()
+    Robot("red", 0, 0)._describe()
+    Robot("red")._describe()
