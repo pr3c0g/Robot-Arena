@@ -1,8 +1,18 @@
 #!/usr/local/opt/python/bin/python3.7
 import random
 import operator
+import curses
 from robot_generator import Robot
 from tabulate import tabulate
+
+
+# For coloring the output
+class colors:
+    Red = '\033[31m'
+    Blue = '\033[34m'
+    Yellow = '\033[33m'
+    endc = '\033[0m'
+    bold = '\033[1m'
 
 
 class Team:
@@ -26,7 +36,15 @@ class Team:
 
         print(f'\n{self.name} Team, {len(self.robots)} robots:')
         robots_table = []
-        for robot in self.robots:
+
+        # Sort the robots by speed before presenting them, so it's easier
+        # to refer to the table while following the rounds
+        robots_by_speed = sorted(
+            self.robots,
+            reverse=True,
+            key=operator.attrgetter('weapon.speed'))
+
+        for robot in robots_by_speed:
             robots_table.append((robot.name,
                                  robot.type,
                                  robot.hp,
@@ -84,14 +102,19 @@ class Battlefield:
         final_damage = max(initial_damage - target.armor, 0)
 
         if critical is True:
-            print(f'Critical Hit!', end=" ")
+            print(f'{colors.bold}{colors.Yellow}Critical Hit!{colors.endc}',
+                  end=" ")
 
         if final_damage == 0:
-            print(f'The shot from {robot.name} hits, but was resisted!',
+            print(f'The shot from '
+                  f'{getattr(colors, robot.team)}{robot.name}{colors.endc}'
+                  f' hits, but was resisted!',
                   end=" ")
         else:
-            print(f"It hits {target.name} for {final_damage} damage"
-                  f" ({initial_damage} - {target.armor}).", end=" ")
+            print(f"It hits "
+                  f"{getattr(colors, target.team)}{target.name}{colors.endc}"
+                  f" for {final_damage} damage ({initial_damage}"
+                  f" - {target.armor}).", end=" ")
 
         target.hp -= final_damage
 
@@ -105,7 +128,7 @@ class Battlefield:
 
             if robot.alive is False:
                 continue
-            target_team = 0 if robot.team == "Blue" else 1
+            target_team = 0 if self.teams[1].name == robot.team else 1
             if any(robot.alive for robot in self.teams[target_team].robots):
                 target = random.choice(list(
                             robot for robot in self.teams[target_team].robots
@@ -115,14 +138,17 @@ class Battlefield:
                 continue
 
             if robot.cooldown <= 0:
-                print(f"{robot.team}: {robot.name} fires at {target.name}",
+                print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
+                      f" fires at {getattr(colors, target.team)}"
+                      f"{target.name}{colors.endc}",
                       end="... ")
                 robot.cooldown = 5 - robot.weapon.speed
                 hit = self.miss_or_hit(robot,
                                        robot.weapon.accuracy,
                                        self.distance)
                 if hit == 0:
-                    print(f'{robot.name} misses.')
+                    print(f'{getattr(colors, robot.team)}{robot.name}'
+                          f'{colors.endc} misses.')
                     continue
 
                 self.resolve_damage(robot, target)
@@ -130,12 +156,14 @@ class Battlefield:
                 if target.hp <= 0:
                     target.hp = 0
                     target.alive = False
-                    print(f'{target.name} was destroyed!')
+                    print(f'{getattr(colors, target.team)}{target.name}'
+                          f'{colors.endc} was destroyed!')
                 else:
                     print(f'{target.hp} HP remains!')
 
             else:
-                print(f"{robot.team}: {robot.name}'s weapon is cooling down, "
+                print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
+                      f"'s weapon is cooling down, "
                       f"{robot.cooldown} turns remaining.")
                 robot.cooldown -= 1
 
@@ -158,7 +186,7 @@ class Battlefield:
         round = 1
 
         while all(team.total_hp > 0 for team in self.teams):
-            self.resolve_turn_v2(round, robots_by_speed)
+            self.resolve_turn(round, robots_by_speed)
             round += 1
 
         if all(team.total_hp <= 0 for team in self.teams):
