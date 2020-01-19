@@ -1,7 +1,6 @@
 #!/usr/local/opt/python/bin/python3.7
 import random
 import operator
-import curses
 from robot_generator import Robot
 from tabulate import tabulate
 
@@ -11,8 +10,10 @@ class colors:
     Red = '\033[31m'
     Blue = '\033[34m'
     Yellow = '\033[33m'
+    Purple = '\033[35m'
     endc = '\033[0m'
     bold = '\033[1m'
+    underline = '\033[4m'
 
 
 class Team:
@@ -122,7 +123,7 @@ class Battlefield:
 
     def resolve_turn(self, round, robots):
 
-        print(f'\n###### TURNS V2 - Starting round {round} ######\n')
+        print(f'\n###### Starting round {round} ######\n')
 
         for robot in robots:
 
@@ -135,7 +136,7 @@ class Battlefield:
                             if robot.alive is True))
             else:
                 print(f'{robot.team} has no more targets')
-                continue
+                break
 
             if robot.cooldown <= 0:
                 print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
@@ -157,7 +158,8 @@ class Battlefield:
                     target.hp = 0
                     target.alive = False
                     print(f'{getattr(colors, target.team)}{target.name}'
-                          f'{colors.endc} was destroyed!')
+                          f' {colors.underline}{colors.Purple}was destroyed!'
+                          f'{colors.endc}')
                 else:
                     print(f'{target.hp} HP remains!')
 
@@ -173,7 +175,8 @@ class Battlefield:
         print(f'\nEnding round {round}')
         for team in self.teams:
             print(f'{(sum([robot.alive for robot in team.robots]))} robots '
-                  f'on team {team.name} survived')
+                  f'on team {getattr(colors, team.name)}'
+                  f'{team.name}{colors.endc} survived')
         input("Press Enter to continue...")
 
     def resolve_battle(self):
@@ -196,7 +199,8 @@ class Battlefield:
         winning_team = None
         winner = 0
         for team in self.teams:
-            print(f'{team.name} finished with {team.total_hp} HP remaining!')
+            print(f'{getattr(colors, team.name)}{team.name}'
+                  f' finished with {team.total_hp} HP remaining!{colors.endc}')
             if team.total_hp > winner:
                 winner = team.total_hp
                 winning_team = team.name
