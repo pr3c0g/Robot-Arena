@@ -51,23 +51,23 @@ def resolve_damage(robot, target):
 
     target.hp -= final_damage
 
+    apply_status_effects(robot.weapon, target)
+
     return critical, initial_damage, final_damage, target.hp
 
-    # if critical is True:
-    #     print(f'{colors.bold}{colors.Yellow}Critical Hit!{colors.endc}',
-    #           end=" ")
 
-    # if final_damage == 0:
-    #     print(f'The shot from '
-    #           f'{getattr(colors, robot.team)}{robot.name}{colors.endc}'
-    #           f' hits, but was resisted!',
-    #           end=" ")
-    # else:
-    #     print(f"It hits "
-    #           f"{getattr(colors, target.team)}{target.name}{colors.endc}"
-    #           f" for {final_damage} damage ({initial_damage}"
-    #           f" - {target.armor}).", end=" ")
+def apply_status_effects(weapon, target):
+    """Damage types cause different effects:
+    Lava    - causes a lot of heat and has a chance to melt off the target
+    Shock   - has a chance to short circuit the target
+    Laser   - causes heat and has a chance to cut off the target
+    Frost   - causes cold and has a chance to freeze the target
+    """
+    if weapon.dmg_type == "Lava":
 
-    # target.hp -= final_damage
+        if float("{:.2f}".format(random.random())) >= 0.8:
+            print(f"{target.name}'s head melted off!", end=" ")
+            target.alive = False
+            target.hp = 0
 
-    # return
+        target.heat += 25

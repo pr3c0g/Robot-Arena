@@ -26,6 +26,7 @@ class Robot:
             self.weapon.accuracy, \
             self.weapon.speed = self._apply_weapon_modifiers()
         self.cooldown = 0
+        self.heat = 100
         self.active = True
         self.alive = True
 

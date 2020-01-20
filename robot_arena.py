@@ -58,7 +58,9 @@ class Team:
 
     def describe(self):
 
-        print(f'\n{self.name} Team, {len(self.robots)} robots:')
+        print(f'\n{self.name} Team, '
+              f'\n{self.strategy} strategy, '
+              f'{len(self.robots)} robots:')
         robots_table = []
 
         # Sort the robots by speed before presenting them, so it's easier
@@ -112,12 +114,29 @@ class Battlefield:
         print(f'The distance betweeen teams is {self.distance}')
 
     def resolve_turn(self, round, robots):
+        """ The turn is divided into 4 phases:
+        Beggining of turn - cooldown weapons,
+                          - cooldown robot (heat)
+
+
+
+        """
 
         print(f'\n###### Starting round {round} ######\n')
 
+        # Beggining of turn:
+        for robot in robots:
+            robot.cooldown = robot.cooldown - 1 if robot.cooldown > 0 else 0
+            robot.heat = robot.heat - 25 if robot.heat > 100 else 100
+            if robot.heat >= 150:
+                robot.active = False
+                print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
+                      f"'s is too hot to function!"
+                      f"Shutting down to cool off")
+
         for robot in robots:
 
-            if robot.alive is False:
+            if robot.alive is False or robot.active is False:
                 continue
 
             robot_team = self.teams[1] if self.teams[1].name == robot.team \
@@ -154,35 +173,39 @@ class Battlefield:
                     final_damage, \
                     target.hp = mechanics.resolve_damage(robot, target)
 
-                if critical is True:
-                    print(f'{colors.bold}{colors.Yellow}Critical Hit!'
-                          f'{colors.endc}', end=" ")
+                if target.alive is False:
+                    print(f'{getattr(colors, target.team)}{target.name} '
+                          f'is dead.{colors.endc}')
 
-                if final_damage == 0:
-                    print(f'The shot from '
-                          f'{getattr(colors, robot.team)}{robot.name}'
-                          f'{colors.endc} hits, but was resisted!',
-                          end=" ")
                 else:
-                    print(f"It hits "
-                          f"{getattr(colors, target.team)}{target.name}"
-                          f"{colors.endc} for {final_damage} damage "
-                          f"({initial_damage} - {target.armor}).", end=" ")
+                    if critical is True:
+                        print(f'{colors.bold}{colors.Yellow}Critical Hit!'
+                              f'{colors.endc}', end=" ")
 
-                if target.hp <= 0:
-                    target.hp = 0
-                    target.alive = False
-                    print(f'{getattr(colors, target.team)}{target.name}'
-                          f' {colors.underline}{colors.Purple}was destroyed!'
-                          f'{colors.endc}')
-                else:
-                    print(f'{target.hp} HP remains!')
+                    if final_damage == 0:
+                        print(f'The shot from '
+                              f'{getattr(colors, robot.team)}{robot.name}'
+                              f'{colors.endc} hits, but was resisted!',
+                              end=" ")
+                    else:
+                        print(f"It hits "
+                              f"{getattr(colors, target.team)}{target.name}"
+                              f"{colors.endc} for {final_damage} damage "
+                              f"({initial_damage} - {target.armor}).", end=" ")
+
+                    if target.hp <= 0:
+                        target.hp = 0
+                        target.alive = False
+                        print(f'{getattr(colors, target.team)}{target.name}'
+                              f' {colors.underline}{colors.Purple}'
+                              f'was destroyed!{colors.endc}')
+                    else:
+                        print(f'{target.hp} HP remains!')
 
             else:
                 print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
                       f"'s weapon is cooling down, "
                       f"{robot.cooldown} turns remaining.")
-                robot.cooldown -= 1
 
         for team in self.teams:
             team.total_hp = sum(robot.hp for robot in team.robots)
@@ -202,6 +225,10 @@ class Battlefield:
             reverse=True,
             key=operator.attrgetter('weapon.speed'))
         round = 1
+
+        # TODO: This will be a problem in the future
+        #       because the combat can end if there are still
+        #       robot.hp > 0 in some teams
 
         while all(team.total_hp > 0 for team in self.teams):
             self.resolve_turn(round, robots_by_speed)
