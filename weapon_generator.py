@@ -65,7 +65,7 @@ def get_random_dmg_type():
 
 def generate_rifle():
     power = random.randint(15, 20)
-    accuracy = random.randint(1, 3)
+    accuracy = random.randint(3, 3)
     speed = 4
 
     return power, accuracy, speed
@@ -74,7 +74,7 @@ def generate_rifle():
 def generate_sniper():
     power = random.randint(25, 30)
     accuracy = random.randint(4, 5)
-    speed = 2
+    speed = 1
 
     return power, accuracy, speed
 
@@ -88,7 +88,7 @@ def generate_cannon():
 
 
 def generate_handgun():
-    power = random.randint(10, 15)
+    power = random.randint(18, 23)
     accuracy = random.randint(3, 3)
     speed = 3
 

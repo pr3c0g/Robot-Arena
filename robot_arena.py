@@ -4,6 +4,9 @@ import operator
 from robot_generator import Robot
 from tabulate import tabulate
 
+strategy_map = {0: "Focused",
+                1: "Random"}
+
 
 # For coloring the output
 class colors:
@@ -18,19 +21,26 @@ class colors:
 
 class Team:
 
-    def __init__(self, name, size, max_pwrlvl, player=False):
+    def __init__(self, name, size, max_pwrlvl, strategy, player=False):
 
         self.name = name
-
-        if player is False:
+        self.strategy = strategy
+        self.ai = True if player is False else False
+        if self.ai is True:
             self.robots = [Robot(self.name) for _ in range(int(size))]
         else:
             self.robots = []
             for _ in range(size):
                 robot_type = input("Pick robot type: "
-                                   + "0:tank, 1:assault, 2:support, 3:gunner) ")
+                                   + "0:tank|"
+                                   + "1:assault|"
+                                   + "2:support|"
+                                   + "3:gunner)")
                 weapon_type = input("Pick weapon type: "
-                                    + "0:rifle, 1:sniper, 2:cannon, 3:handgun) ")
+                                    + "0:rifle|"
+                                    + "1:sniper|"
+                                    + "2:cannon|"
+                                    + "3:handgun)")
                 self.robots.append(Robot(self.name, robot_type, weapon_type))
                 print(f'Creating robot {_}: {self.robots[_].name}\n')
 
@@ -141,14 +151,40 @@ class Battlefield:
 
             if robot.alive is False:
                 continue
+
+            robot_team = 1 if self.teams[1].name == robot.team else 0
             target_team = 0 if self.teams[1].name == robot.team else 1
-            if any(robot.alive for robot in self.teams[target_team].robots):
-                target = random.choice(list(
-                            robot for robot in self.teams[target_team].robots
-                            if robot.alive is True))
-            else:
-                print(f'{robot.team} has no more targets')
-                break
+
+            # Targeting strategy
+            # Focused:
+            if self.teams[robot_team].strategy == "Focused":
+                available_targets = [robot
+                                     for robot
+                                     in self.teams[target_team].robots
+                                     if robot.alive is True]
+                if len(available_targets) >= 1:
+                    target = available_targets[0]
+                    for a_target in available_targets:
+                        target = a_target \
+                                 if a_target.hp == min(
+                                     a_target.hp
+                                     for a_target in available_targets) \
+                                 else target
+                else:
+                    print(f'{robot.team} has no more targets')
+                    break
+
+            # Random:
+            if self.teams[robot_team].strategy == "Random":
+                if any(robot.alive for robot in
+                       self.teams[target_team].robots):
+                    target = random.choice(list(
+                                robot
+                                for robot in self.teams[target_team].robots
+                                if robot.alive is True))
+                else:
+                    print(f'{robot.team} has no more targets')
+                    break
 
             if robot.cooldown <= 0:
                 print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
@@ -227,14 +263,25 @@ if __name__ == '__main__':
     # max_pwrlvl = input(f'What is the max powerlevel per team? ')
     max_pwrlvl = 100
     team_size = int(input(f'What is the number of robots per team? '))
+    strategy = int(input("Pick strategy for round:\n"
+                         + "0: Focused\n"
+                         + "1: Random\n"))
 
     # Create player team based on input
     # player_team_name = input(f"What's the team color? ")
     player_team_name = "Blue"
-    player_team = Team(player_team_name, team_size, max_pwrlvl, True)
+    player_team = Team(player_team_name,
+                       team_size,
+                       max_pwrlvl,
+                       strategy_map[strategy],
+                       True)
 
     # Create AI team
-    red_team = Team("Red", team_size, max_pwrlvl, False)
+    red_team = Team("Red",
+                    team_size,
+                    max_pwrlvl,
+                    "Focused",
+                    False)
     # blue_team = Team("Blue", team_size, max_pwrlvl, False)
 
     # Pre battle start
