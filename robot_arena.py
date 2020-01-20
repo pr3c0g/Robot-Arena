@@ -10,7 +10,7 @@ strategy_map = {0: "Focused",
 
 
 # For coloring the output
-class colors:
+class Colors:
     Red = '\033[31m'
     Blue = '\033[34m'
     Yellow = '\033[33m'
@@ -115,11 +115,17 @@ class Battlefield:
 
     def resolve_turn(self, round, robots):
         """ The turn is divided into 4 phases:
-        Beggining of turn - cooldown weapons,
-                          - cooldown robot (heat)
+        Beggining of turn   - cooldown weapons,
+                            - cooldown robot (heat)
 
+        Fire step           - check team strategy
+                            - define target based on strategy
+                            - check if cooldown
+                            - check hit or miss
+                            - calculate damage
+                            - apply status effects
 
-
+        Ending of turn      - Check total hp in teams
         """
 
         print(f'\n###### Starting round {round} ######\n')
@@ -130,7 +136,7 @@ class Battlefield:
             robot.heat = robot.heat - 25 if robot.heat > 100 else 100
             if robot.heat >= 150:
                 robot.active = False
-                print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
+                print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
                       f"'s is too hot to function!"
                       f"Shutting down to cool off")
 
@@ -155,17 +161,17 @@ class Battlefield:
                 break
 
             if robot.cooldown <= 0:
-                print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
-                      f" fires at {getattr(colors, target.team)}"
-                      f"{target.name}{colors.endc}",
+                print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
+                      f" fires at {getattr(Colors, target.team)}"
+                      f"{target.name}{Colors.endc}",
                       end="... ")
                 robot.cooldown = 5 - robot.weapon.speed
                 hit = mechanics.miss_or_hit(robot,
                                             robot.weapon.accuracy,
                                             self.distance)
                 if hit == 0:
-                    print(f'{getattr(colors, robot.team)}{robot.name}'
-                          f'{colors.endc} misses.')
+                    print(f'{getattr(Colors, robot.team)}{robot.name}'
+                          f'{Colors.endc} misses.')
                     continue
 
                 critical, \
@@ -173,37 +179,44 @@ class Battlefield:
                     final_damage, \
                     target.hp = mechanics.resolve_damage(robot, target)
 
+                if len(target.status_effects) > 0:
+                    for status in target.status_effects:
+                        print(f"{getattr(Colors, target.team)}{target.name}"
+                              f"{Colors.endc}'s {Colors.Yellow}"
+                              f"{mechanics.status_effects_map[status]}",
+                              end=" ")
+
                 if target.alive is False:
-                    print(f'{getattr(colors, target.team)}{target.name} '
-                          f'is dead.{colors.endc}')
+                    print(f'{getattr(Colors, target.team)}{target.name} '
+                          f'is dead.{Colors.endc}')
 
                 else:
                     if critical is True:
-                        print(f'{colors.bold}{colors.Yellow}Critical Hit!'
-                              f'{colors.endc}', end=" ")
+                        print(f'{Colors.bold}{Colors.Yellow}Critical Hit!'
+                              f'{Colors.endc}', end=" ")
 
                     if final_damage == 0:
                         print(f'The shot from '
-                              f'{getattr(colors, robot.team)}{robot.name}'
-                              f'{colors.endc} hits, but was resisted!',
+                              f'{getattr(Colors, robot.team)}{robot.name}'
+                              f'{Colors.endc} hits, but was resisted!',
                               end=" ")
                     else:
                         print(f"It hits "
-                              f"{getattr(colors, target.team)}{target.name}"
-                              f"{colors.endc} for {final_damage} damage "
+                              f"{getattr(Colors, target.team)}{target.name}"
+                              f"{Colors.endc} for {final_damage} damage "
                               f"({initial_damage} - {target.armor}).", end=" ")
 
                     if target.hp <= 0:
                         target.hp = 0
                         target.alive = False
-                        print(f'{getattr(colors, target.team)}{target.name}'
-                              f' {colors.underline}{colors.Purple}'
-                              f'was destroyed!{colors.endc}')
+                        print(f'{getattr(Colors, target.team)}{target.name}'
+                              f' {Colors.underline}{Colors.Purple}'
+                              f'was destroyed!{Colors.endc}')
                     else:
                         print(f'{target.hp} HP remains!')
 
             else:
-                print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
+                print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
                       f"'s weapon is cooling down, "
                       f"{robot.cooldown} turns remaining.")
 
@@ -213,8 +226,8 @@ class Battlefield:
         print(f'\nEnding round {round}')
         for team in self.teams:
             print(f'{(sum([robot.alive for robot in team.robots]))} robots '
-                  f'on team {getattr(colors, team.name)}'
-                  f'{team.name}{colors.endc} survived')
+                  f'on team {getattr(Colors, team.name)}'
+                  f'{team.name}{Colors.endc} survived')
         input("Press Enter to continue...")
 
     def resolve_battle(self):
@@ -245,8 +258,8 @@ class Battlefield:
                 winner = team.total_hp
                 winning_team = team.name
 
-        print(f'{getattr(colors, winning_team)}\n{winning_team}'
-              f' wins with {team.total_hp} HP remaining!{colors.endc}')
+        print(f'{getattr(Colors, winning_team)}\n{winning_team}'
+              f' wins with {winner} HP remaining!{Colors.endc}')
 
 
 if __name__ == '__main__':
@@ -255,31 +268,34 @@ if __name__ == '__main__':
     # max_pwrlvl = input(f'What is the max powerlevel per team? ')
     max_pwrlvl = 100
     team_size = int(input(f'What is the number of robots per team? '))
-    strategy = int(input("Pick strategy for round:\n"
-                         + "0: Focused\n"
-                         + "1: Random\n"))
 
     # Create player team based on input
     # player_team_name = input(f"What's the team color? ")
-    player_team_name = "Blue"
-    player_team = Team(player_team_name,
-                       team_size,
-                       max_pwrlvl,
-                       strategy_map[strategy],
-                       True)
+    # strategy = int(input("Pick strategy for round:\n"
+    #                      + "0: Focused\n"
+    #                      + "1: Random\n"))
+    # player_team_name = "Blue"
+    # player_team = Team(player_team_name,
+    #                    team_size,
+    #                    max_pwrlvl,
+    #                    strategy_map[strategy],
+    #                    True)
+    # player_team.describe()
 
     # Create AI team
     red_team = Team("Red",
                     team_size,
                     max_pwrlvl,
-                    "Focused",
+                    "Random",
                     False)
-    # blue_team = Team("Blue", team_size, max_pwrlvl, False)
+    blue_team = Team("Blue",
+                     team_size,
+                     max_pwrlvl,
+                     "Random",
+                     False)
 
-    # Pre battle start
     red_team.describe()
-    # blue_team.describe()
-    player_team.describe()
+    blue_team.describe()
 
     # Battle
-    Battlefield(red_team, player_team).resolve_battle()
+    Battlefield(red_team, blue_team).resolve_battle()

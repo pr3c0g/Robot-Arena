@@ -27,6 +27,7 @@ class Robot:
             self.weapon.speed = self._apply_weapon_modifiers()
         self.cooldown = 0
         self.heat = 100
+        self.status_effects = []
         self.active = True
         self.alive = True
 

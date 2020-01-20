@@ -51,9 +51,12 @@ def resolve_damage(robot, target):
 
     target.hp -= final_damage
 
-    apply_status_effects(robot.weapon, target)
+    status_effect = apply_status_effects(robot.weapon, target)
 
-    return critical, initial_damage, final_damage, target.hp
+    return critical,\
+        initial_damage,\
+        final_damage,\
+        target.hp
 
 
 def apply_status_effects(weapon, target):
@@ -63,11 +66,15 @@ def apply_status_effects(weapon, target):
     Laser   - causes heat and has a chance to cut off the target
     Frost   - causes cold and has a chance to freeze the target
     """
+    status_effect_text = ""
     if weapon.dmg_type == "Lava":
 
-        if float("{:.2f}".format(random.random())) >= 0.8:
-            print(f"{target.name}'s head melted off!", end=" ")
+        if float("{:.2f}".format(random.random())) >= 0.85:
+            target.status_effects.append("Melted")
             target.alive = False
             target.hp = 0
 
         target.heat += 25
+
+
+status_effects_map = {"Melted": "head melted off!"}
