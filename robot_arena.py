@@ -1,6 +1,7 @@
 #!/usr/local/opt/python/bin/python3.7
 import random
 import operator
+import mechanics
 from robot_generator import Robot
 from tabulate import tabulate
 
@@ -110,39 +111,6 @@ class Battlefield:
         self.distance = random.randint(1, 10)
         print(f'The distance betweeen teams is {self.distance}')
 
-    def miss_or_hit(self, robot, weapon_acc, distance):
-        if (weapon_acc / distance / random.random()) >= 0.5:
-            return 1
-        else:
-            return 0
-
-    def resolve_damage(self, robot, target):
-        initial_damage = int(robot.weapon.power * random.uniform(0.9, 1.1))
-        critical = True if (
-            float("{:.2f}".format(random.random()))) >= 0.9 else False
-        initial_damage = int(
-            initial_damage * 1.5) if critical is True else initial_damage
-        final_damage = max(initial_damage - target.armor, 0)
-
-        if critical is True:
-            print(f'{colors.bold}{colors.Yellow}Critical Hit!{colors.endc}',
-                  end=" ")
-
-        if final_damage == 0:
-            print(f'The shot from '
-                  f'{getattr(colors, robot.team)}{robot.name}{colors.endc}'
-                  f' hits, but was resisted!',
-                  end=" ")
-        else:
-            print(f"It hits "
-                  f"{getattr(colors, target.team)}{target.name}{colors.endc}"
-                  f" for {final_damage} damage ({initial_damage}"
-                  f" - {target.armor}).", end=" ")
-
-        target.hp -= final_damage
-
-        return
-
     def resolve_turn(self, round, robots):
 
         print(f'\n###### Starting round {round} ######\n')
@@ -152,39 +120,20 @@ class Battlefield:
             if robot.alive is False:
                 continue
 
-            robot_team = 1 if self.teams[1].name == robot.team else 0
-            target_team = 0 if self.teams[1].name == robot.team else 1
+            robot_team = self.teams[1] if self.teams[1].name == robot.team \
+                else self.teams[0]
+            target_team = self.teams[0] if self.teams[1].name == robot.team \
+                else self.teams[1]
 
-            # Targeting strategy
-            # Focused:
-            if self.teams[robot_team].strategy == "Focused":
-                available_targets = [robot
-                                     for robot
-                                     in self.teams[target_team].robots
-                                     if robot.alive is True]
-                if len(available_targets) >= 1:
-                    target = available_targets[0]
-                    for a_target in available_targets:
-                        target = a_target \
-                                 if a_target.hp == min(
-                                     a_target.hp
-                                     for a_target in available_targets) \
-                                 else target
-                else:
-                    print(f'{robot.team} has no more targets')
-                    break
-
-            # Random:
-            if self.teams[robot_team].strategy == "Random":
-                if any(robot.alive for robot in
-                       self.teams[target_team].robots):
-                    target = random.choice(list(
-                                robot
-                                for robot in self.teams[target_team].robots
-                                if robot.alive is True))
-                else:
-                    print(f'{robot.team} has no more targets')
-                    break
+            strat = getattr(mechanics, "strategy_"
+                            + str.lower(robot_team.strategy))
+            target = strat(robot_team,
+                           robot,
+                           target_team,
+                           self.teams)
+            if target is None:
+                print(f'{robot.team} has no more targets')
+                break
 
             if robot.cooldown <= 0:
                 print(f"{getattr(colors, robot.team)}{robot.name}{colors.endc}"
@@ -192,15 +141,33 @@ class Battlefield:
                       f"{target.name}{colors.endc}",
                       end="... ")
                 robot.cooldown = 5 - robot.weapon.speed
-                hit = self.miss_or_hit(robot,
-                                       robot.weapon.accuracy,
-                                       self.distance)
+                hit = mechanics.miss_or_hit(robot,
+                                            robot.weapon.accuracy,
+                                            self.distance)
                 if hit == 0:
                     print(f'{getattr(colors, robot.team)}{robot.name}'
                           f'{colors.endc} misses.')
                     continue
 
-                self.resolve_damage(robot, target)
+                critical, \
+                    initial_damage, \
+                    final_damage, \
+                    target.hp = mechanics.resolve_damage(robot, target)
+
+                if critical is True:
+                    print(f'{colors.bold}{colors.Yellow}Critical Hit!'
+                          f'{colors.endc}', end=" ")
+
+                if final_damage == 0:
+                    print(f'The shot from '
+                          f'{getattr(colors, robot.team)}{robot.name}'
+                          f'{colors.endc} hits, but was resisted!',
+                          end=" ")
+                else:
+                    print(f"It hits "
+                          f"{getattr(colors, target.team)}{target.name}"
+                          f"{colors.endc} for {final_damage} damage "
+                          f"({initial_damage} - {target.armor}).", end=" ")
 
                 if target.hp <= 0:
                     target.hp = 0
@@ -247,14 +214,12 @@ class Battlefield:
         winning_team = None
         winner = 0
         for team in self.teams:
-            print(f'{getattr(colors, team.name)}{team.name}'
-                  f' finished with {team.total_hp} HP remaining!{colors.endc}')
             if team.total_hp > winner:
                 winner = team.total_hp
                 winning_team = team.name
 
-        print(f'{getattr(colors, winning_team)}\n{winning_team}{colors.endc}'
-              f' wins!')
+        print(f'{getattr(colors, winning_team)}\n{winning_team}'
+              f' wins with {team.total_hp} HP remaining!{colors.endc}')
 
 
 if __name__ == '__main__':
