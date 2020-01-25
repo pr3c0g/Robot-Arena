@@ -2,8 +2,17 @@
 import random
 import string
 
+# All status effects and their messages
+# TODO: Create a separate json or something with this
+status_effects_map = {
+                        "Melted": "head melted off!",
+                        "Overheating": "too hot!",
+                        "Frozen": "frozen!"
+                     }
+
 
 def strategy_random(active_team, active_robot, target_team, teams):
+    """ Combat strategy for randomly selecting targets"""
 
     if not any(robot.alive for robot in target_team.robots):
         return None
@@ -17,6 +26,13 @@ def strategy_random(active_team, active_robot, target_team, teams):
 
 
 def strategy_focused(active_team, active_robot, target_team, teams):
+    """ Combat strategy for focusing on the target
+    with the least HP.
+    TODO: Create modifications for targetting:
+        - Snipers or other weapon type
+        - Highest damange output enemy
+        - Quickest enemies
+    """
 
     if not any(robot.alive for robot in target_team.robots):
         return None
@@ -68,13 +84,29 @@ def apply_status_effects(weapon, target):
     """
     status_effect_text = ""
     if weapon.dmg_type == "Lava":
-
+        # TODO: Check resistance to damage type before melting
         if float("{:.2f}".format(random.random())) >= 0.85:
             target.status_effects.append("Melted")
             target.alive = False
             target.hp = 0
 
-        target.heat += 25
+        robot_heat(target, "heating", 25)
 
 
-status_effects_map = {"Melted": "head melted off!"}
+def robot_heat(robot, mode, quantity=0):
+
+    if mode == "heating":
+        robot.heat += quantity
+
+    if mode == "cooling":
+        robot.heat -= quantity
+
+    if mode == "calibrate":
+        robot.heat = robot.heat - 25 if robot.heat > 100 else robot.heat + 25
+
+    if robot.heat >= robot.heat_max_threshold:
+        robot.active = False
+        robot.status_effects.append("Overheating")
+    elif robot.heat <= robot.heat_min_threshold:
+        robot.active = False
+        robot.status_effects.append("Frozen")

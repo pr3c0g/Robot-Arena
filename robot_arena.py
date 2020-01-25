@@ -2,6 +2,7 @@
 import random
 import operator
 import mechanics
+import time
 from robot_generator import Robot
 from tabulate import tabulate
 
@@ -104,6 +105,8 @@ class Team:
 
 
 class Battlefield:
+    # TODO: - Battlefield climates to affect cooldowns and heat
+    # TODO: - Obstacles
 
     def __init__(self, team1, team2):
         self.teams = []
@@ -118,7 +121,7 @@ class Battlefield:
         Beggining of turn   - cooldown weapons,
                             - cooldown robot (heat)
 
-        Fire step           - check team strategy
+        Combat phase        - check team strategy
                             - define target based on strategy
                             - check if cooldown
                             - check hit or miss
@@ -128,19 +131,19 @@ class Battlefield:
         Ending of turn      - Check total hp in teams
         """
 
-        print(f'\n###### Starting round {round} ######\n')
+        print(f'{Colors.bold}\nStarting round {round}{Colors.endc}')
 
         # Beggining of turn:
         for robot in robots:
-            robot.cooldown = robot.cooldown - 1 if robot.cooldown > 0 else 0
-            robot.heat = robot.heat - 25 if robot.heat > 100 else 100
-            if robot.heat >= 150:
-                robot.active = False
-                print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
-                      f"'s is too hot to function!"
-                      f"Shutting down to cool off")
+            robot.weapon.cooldown = robot.weapon.cooldown - 1 \
+                                    if robot.weapon.cooldown > 0 else 0
+            mechanics.robot_heat(robot, "calibrate")
+            print(f'{robot.name} - {robot.heat}')
 
+        input(f"Ready for combat?")
+        # Combat phase
         for robot in robots:
+            # time.sleep(1)
 
             if robot.alive is False or robot.active is False:
                 continue
@@ -160,12 +163,12 @@ class Battlefield:
                 print(f'{robot.team} has no more targets')
                 break
 
-            if robot.cooldown <= 0:
+            if robot.weapon.cooldown <= 0:
                 print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
                       f" fires at {getattr(Colors, target.team)}"
                       f"{target.name}{Colors.endc}",
                       end="... ")
-                robot.cooldown = 5 - robot.weapon.speed
+                robot.weapon.cooldown = 5 - robot.weapon.speed
                 hit = mechanics.miss_or_hit(robot,
                                             robot.weapon.accuracy,
                                             self.distance)
@@ -218,7 +221,7 @@ class Battlefield:
             else:
                 print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
                       f"'s weapon is cooling down, "
-                      f"{robot.cooldown} turns remaining.")
+                      f"{robot.weapon.cooldown} turns remaining.")
 
         for team in self.teams:
             team.total_hp = sum(robot.hp for robot in team.robots)
@@ -228,7 +231,6 @@ class Battlefield:
             print(f'{(sum([robot.alive for robot in team.robots]))} robots '
                   f'on team {getattr(Colors, team.name)}'
                   f'{team.name}{Colors.endc} survived')
-        input("Press Enter to continue...")
 
     def resolve_battle(self):
         print(f'\nStarting battle!')

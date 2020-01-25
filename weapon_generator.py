@@ -14,6 +14,7 @@ class Weapon:
         self.type = get_random_weapon_type() \
             if weapon_type is None else weapon_map[int(weapon_type)]
         self.dmg_type = get_random_dmg_type()
+        self.cooldown = 0
 
         self.traits = get_random_traits()
         self.name = ' '.join(
@@ -56,10 +57,10 @@ def get_random_weapon_type():
 
 def get_random_dmg_type():
     """Refer to the docstring @ mechanics.apply_status_effects()"""
-    dmg_type = ['Lava',
-                'Frost',
-                'Shock',
-                'Laser']
+    dmg_type = ['Lava']
+                #'Frost',
+                #'Shock',
+                #'Laser']
     return random.choice(dmg_type)
 
 

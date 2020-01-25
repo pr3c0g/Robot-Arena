@@ -11,23 +11,33 @@ robot_map = {0: 'tank',
 class Robot:
 
     def __init__(self, team, robot_type=None, weapon_type=None):
+
+        # Robot identity
         self.type = get_random_robot_type() \
                     if robot_type is None else robot_map[int(robot_type)]
-
-        self.hp, \
-            self.armor, \
-            self.weapon_modifiers = globals()["generate_" + self.type]()
-
         name_list = open('robot_names.txt').read().splitlines()
         self.name = random.choice(name_list)
         self.team = team
+
+        # Robot stats
+        self.hp, \
+            self.armor, \
+            self.weapon_modifiers = globals()["generate_" + self.type]()
         self.weapon = Weapon() if weapon_type is None else Weapon(weapon_type)
         self.weapon.power, \
             self.weapon.accuracy, \
             self.weapon.speed = self._apply_weapon_modifiers()
-        self.cooldown = 0
+
+        # For heat mechanic
         self.heat = 100
+        self.heat_max_threshold = 175
+        self.heat_min_threshold = 0
+        self.heat_dissipation = 25
+        self.heat_generation = 25
+
         self.status_effects = []
+
+        # General states for the Robot
         self.active = True
         self.alive = True
 
