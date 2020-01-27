@@ -1,13 +1,17 @@
 #!/usr/local/opt/python/bin/python3.7
 import random
 import operator
-import mechanics
+import functools
 import time
-from robot_generator import Robot
+import logging
+import mechanics
+import robot_generator
 from tabulate import tabulate
+
 
 strategy_map = {0: "Focused",
                 1: "Random"}
+robot_map = robot_generator.robot_map
 
 
 # For coloring the output
@@ -29,7 +33,10 @@ class Team:
         self.strategy = strategy
         self.ai = True if player is False else False
         if self.ai is True:
-            self.robots = [Robot(self.name) for _ in range(int(size))]
+            random_type = robot_map[random.randint(0, 3)]
+            self.robots = [(getattr(robot_generator,
+                            random_type)(self.name))
+                           for _ in range(int(size))]
         else:
             self.robots = []
             for _ in range(size):
@@ -43,7 +50,11 @@ class Team:
                                     + "1:sniper|"
                                     + "2:cannon|"
                                     + "3:handgun)")
-                self.robots.append(Robot(self.name, robot_type, weapon_type))
+                type_to_generate = robot_generator.robot_map[robot_type]
+                self.robot.append(
+                    robot_generator.type_to_generate(self.name,
+                                                     weapon_type))
+                # self.robots.append(Robot(self.name, weapon_type))
                 print(f'Creating robot {_}: {self.robots[_].name}\n')
 
         self.total_hp = sum(robot.hp for robot in self.robots)
@@ -118,15 +129,14 @@ class Battlefield:
 
     def resolve_turn(self, round, robots):
         """ The turn is divided into 4 phases:
-        Beggining of turn   - cooldown weapons,
-                            - cooldown robot (heat)
+        Beggining of turn   1 - Stabilize core
+                            2 - Cooldown weapons
 
-        Combat phase        - check team strategy
-                            - define target based on strategy
-                            - check if cooldown
-                            - check hit or miss
-                            - calculate damage
-                            - apply status effects
+        Combat phase        1 - check team strategy
+                            2 - define target based on strategy
+                            3 - check weapon cooldown
+                            4 - check hit or miss
+                            5 - resolve damage + status effects
 
         Ending of turn      - Check total hp in teams
         """
@@ -134,18 +144,29 @@ class Battlefield:
         print(f'{Colors.bold}\nStarting round {round}{Colors.endc}')
 
         # Beggining of turn:
-        for robot in robots:
-            robot.weapon.cooldown = robot.weapon.cooldown - 1 \
-                                    if robot.weapon.cooldown > 0 else 0
-            mechanics.robot_heat(robot, "calibrate")
-            print(f'{robot.name} - {robot.heat}')
+        alive_robots = (x for x in robots if x.alive is True)
 
-        input(f"Ready for combat?")
+        for robot in alive_robots:
+            # 1 - Stabilize core
+            robot.core.stabilize(robot)
+            # 2 - Cooldown weapons
+            robot.weapon.cooldown = robot.weapon.cooldown - 1 \
+                if robot.weapon.cooldown > 0 else 0
+
+        input(f"Ready for combat?\n")
+
         # Combat phase
         for robot in robots:
+            log.debug(f"{robot.name} is resolving his turn..")
             # time.sleep(1)
 
-            if robot.alive is False or robot.active is False:
+            # Show robots that will skip the turn but explain why
+            # TODO: A table would be nice
+            if robot.alive is False:
+                continue
+            if robot.active is False:
+                print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
+                      f" is skipping this turn due to being disabled !")
                 continue
 
             robot_team = self.teams[1] if self.teams[1].name == robot.team \
@@ -153,75 +174,79 @@ class Battlefield:
             target_team = self.teams[0] if self.teams[1].name == robot.team \
                 else self.teams[1]
 
+            # 1 - check team strategy
             strat = getattr(mechanics, "strategy_"
                             + str.lower(robot_team.strategy))
+            # 2 - define target based on strategy
             target = strat(robot_team,
                            robot,
                            target_team,
                            self.teams)
-            if target is None:
+            if target is None:  # If there's no more targets end the round
                 print(f'{robot.team} has no more targets')
                 break
 
-            if robot.weapon.cooldown <= 0:
-                print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
-                      f" fires at {getattr(Colors, target.team)}"
-                      f"{target.name}{Colors.endc}",
-                      end="... ")
-                robot.weapon.cooldown = 5 - robot.weapon.speed
-                hit = mechanics.miss_or_hit(robot,
-                                            robot.weapon.accuracy,
-                                            self.distance)
-                if hit == 0:
-                    print(f'{getattr(Colors, robot.team)}{robot.name}'
-                          f'{Colors.endc} misses.')
-                    continue
-
-                critical, \
-                    initial_damage, \
-                    final_damage, \
-                    target.hp = mechanics.resolve_damage(robot, target)
-
-                if len(target.status_effects) > 0:
-                    for status in target.status_effects:
-                        print(f"{getattr(Colors, target.team)}{target.name}"
-                              f"{Colors.endc}'s {Colors.Yellow}"
-                              f"{mechanics.status_effects_map[status]}",
-                              end=" ")
-
-                if target.alive is False:
-                    print(f'{getattr(Colors, target.team)}{target.name} '
-                          f'is dead.{Colors.endc}')
-
-                else:
-                    if critical is True:
-                        print(f'{Colors.bold}{Colors.Yellow}Critical Hit!'
-                              f'{Colors.endc}', end=" ")
-
-                    if final_damage == 0:
-                        print(f'The shot from '
-                              f'{getattr(Colors, robot.team)}{robot.name}'
-                              f'{Colors.endc} hits, but was resisted!',
-                              end=" ")
-                    else:
-                        print(f"It hits "
-                              f"{getattr(Colors, target.team)}{target.name}"
-                              f"{Colors.endc} for {final_damage} damage "
-                              f"({initial_damage} - {target.armor}).", end=" ")
-
-                    if target.hp <= 0:
-                        target.hp = 0
-                        target.alive = False
-                        print(f'{getattr(Colors, target.team)}{target.name}'
-                              f' {Colors.underline}{Colors.Purple}'
-                              f'was destroyed!{Colors.endc}')
-                    else:
-                        print(f'{target.hp} HP remains!')
-
-            else:
+            # 3 - check weapon cooldown
+            if robot.weapon.cooldown > 0:
                 print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
                       f"'s weapon is cooling down, "
                       f"{robot.weapon.cooldown} turns remaining.")
+                continue
+
+            print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
+                  f" attacks {getattr(Colors, target.team)}"
+                  f"{target.name}{Colors.endc}",
+                  end="... ")
+            robot.weapon.cooldown = 5 - robot.weapon.speed
+
+            # 4 - check hit or miss
+            hit = mechanics.miss_or_hit(robot,
+                                        robot.weapon.accuracy,
+                                        self.distance)
+            if hit == 0:
+                print(f'{getattr(Colors, robot.team)}{robot.name}'
+                      f'{Colors.endc} misses.')
+                continue
+
+            # 5 - resolve damage + status effects
+            critical, \
+                initial_damage, \
+                final_damage, \
+                target.hp = mechanics.resolve_damage(robot, target)
+
+            if critical is True:
+                print(f'{Colors.bold}{Colors.Yellow}Critical Hit!'
+                      f'{Colors.endc}', end=" ")
+
+            if final_damage == 0:
+                print(f'The shot from '
+                      f'{getattr(Colors, robot.team)}{robot.name}'
+                      f'{Colors.endc} hits, but was resisted!',
+                      end=" ")
+            else:
+                print(f"It hits "
+                      f"{getattr(Colors, target.team)}{target.name}"
+                      f"{Colors.endc} for {final_damage} damage "
+                      f"({initial_damage} - {target.armor}).", end=" ")
+            if target.hp <= 0:
+                target.hp = 0
+                target.alive = False
+                target.active = False
+
+            if len(target.status_effects) > 0:
+                for status in target.status_effects:
+                    print(f"{getattr(Colors, target.team)}{target.name}"
+                          f"{Colors.endc}{Colors.Yellow}"
+                          f"'s {mechanics.status_effects_map[status]}"
+                          f"{Colors.endc}",
+                          end=" ")
+
+            if target.alive is False:
+                print(f'{getattr(Colors, target.team)}{target.name} '
+                      f'is dead.{Colors.endc}')
+
+            else:
+                print(f'{target.hp} HP remains!')
 
         for team in self.teams:
             team.total_hp = sum(robot.hp for robot in team.robots)
@@ -266,6 +291,10 @@ class Battlefield:
 
 if __name__ == '__main__':
 
+    logging.basicConfig()
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.INFO)
+    log.debug(f"BEGIN DEBUG LOGGING")
     # Define battle parameters
     # max_pwrlvl = input(f'What is the max powerlevel per team? ')
     max_pwrlvl = 100

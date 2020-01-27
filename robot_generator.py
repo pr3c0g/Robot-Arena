@@ -1,124 +1,170 @@
 #!/usr/local/opt/python/bin/python3.7
 import random
-from tabulate import tabulate
+import logging
 from weapon_generator import Weapon
-robot_map = {0: 'tank',
-             1: 'assault',
-             2: 'support',
-             3: 'gunner'}
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+
+robot_map = {0: 'Tank',
+             1: 'Assault',
+             2: 'Support',
+             3: 'Gunner'}
 
 
 class Robot:
 
-    def __init__(self, team, robot_type=None, weapon_type=None):
+    def __init__(self, team, weapon_type=None):
 
-        # Robot identity
-        self.type = get_random_robot_type() \
-                    if robot_type is None else robot_map[int(robot_type)]
-        name_list = open('robot_names.txt').read().splitlines()
-        self.name = random.choice(name_list)
+        # Create core
+        self.core = Core()
+        self.name = random.choice(
+            open('robot_names.txt').read().splitlines())
         self.team = team
 
-        # Robot stats
-        self.hp, \
-            self.armor, \
-            self.weapon_modifiers = globals()["generate_" + self.type]()
+        # Robot weapons
         self.weapon = Weapon() if weapon_type is None else Weapon(weapon_type)
-        self.weapon.power, \
-            self.weapon.accuracy, \
-            self.weapon.speed = self._apply_weapon_modifiers()
 
-        # For heat mechanic
+        # Status effects is declared as a set to have unique values
+        # TODO: Think about better ways to handle status effects
+        self.status_effects = set()
+
+        # General states for the Robot
+        self.active = True
+        self.alive = True
+
+    def check_core(self):
+        self.core.check_level(self)
+
+    def __repr__(self):
+        return f"{self.name}"
+        # return (f'{self.name}|'
+        #         f'{self.type}|'
+        #         f'HP:{self.hp}|'
+        #         f'ARM:{self.armor}|'
+        #         f'{self.weapon.name}|'
+        #         f'PWR:{self.weapon.power}|'
+        #         f'ACC:{self.weapon.accuracy}|'
+        #         f'SPD:{self.weapon.speed}\n'
+        #         f'CORE:{repr(self.core)}')
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class Core:
+    """ This is the Core class that is created
+    during the Robot class init, that handles
+    the heat mechanic.
+    TODO:
+    - Implement other effects / events
+    regarding the core and damage types
+    - Think about soul/spirit concept and
+    implement it into the core
+    """
+
+    def __init__(self):
+        self.optimal_heat = 100
         self.heat = 100
         self.heat_max_threshold = 175
         self.heat_min_threshold = 0
         self.heat_dissipation = 25
         self.heat_generation = 25
 
-        self.status_effects = []
+    def increase_heat(self, qt):
+        self.heat += qt
 
-        # General states for the Robot
-        self.active = True
-        self.alive = True
+    def decrease_heat(self, qt):
+        self.heat -= qt
 
-    def _apply_weapon_modifiers(self):
-        power = max(
-                self.weapon_modifiers["wpn_pwr_mod"]
-                + self.weapon.power, 1)
-        accuracy = max(
-                   self.weapon_modifiers["wpn_acc_mod"]
-                   + self.weapon.accuracy, 1)
-        speed = max(
-                self.weapon_modifiers["wpn_spd_mod"]
-                + self.weapon.speed, 1)
+    def stabilize(self, owner):
+        # Attempt to stabilize at optimal heat
+        log.debug(f'This core is at {self.heat}')
+        self.heat = self.heat + self.heat_generation \
+            if self.heat < self.optimal_heat \
+            else self.heat
+        self.heat = self.heat - self.heat_dissipation \
+            if self.heat > self.optimal_heat \
+            else self.heat
+        log.debug(f'Stabilized at {self.heat}')
+        self.check_level(owner)
 
-        return power, accuracy, speed
+    def check_level(self, owner):
+        log.debug(f'Checking if {owner.name} robot.active has to switch, '
+                  f'currently at {owner.active}')
+        if self.heat > self.heat_max_threshold \
+                or self.heat < self.heat_min_threshold:
+            owner.active = False
+        else:
+            owner.active = True
+        log.debug(f'Active is now {owner.active}')
 
-    def _describe(self):
-        table = []
-        table.append((self.name,
-                      self.type,
-                      self.hp,
-                      self.armor,
-                      self.weapon.name,
-                      self.weapon.power,
-                      self.weapon.accuracy,
-                      self.weapon.speed))
+    def __str__(self):
+        return f"Current heat at {self.heat}"
 
-        print(tabulate(table, headers=['Name',
-                                       'Type',
-                                       'HP',
-                                       'Armor',
-                                       'Weapon',
-                                       'Power',
-                                       'Accuracy',
-                                       'Speed'], tablefmt="fancy_grid"))
+    def __repr__(self):
+        return (f'LVL:{self.heat}|'
+                f'OPT:{self.optimal_heat}|'
+                f'MAX:{self.heat_max_threshold}|'
+                f'MIN:{self.heat_min_threshold}|'
+                f'DIS:{self.heat_dissipation}|'
+                f'GEN:{self.heat_generation}')
 
 
+# TODO: The following functions should eventually be replaced
+# with class inheritance
 def get_random_robot_type():
     return robot_map[random.randint(0, 3)]
 
 
-def generate_tank():
-    hp = random.randint(70, 80)
-    armor = 3
-    weapon_modifiers = {"wpn_pwr_mod": 2,
-                        "wpn_spd_mod": -1,
-                        "wpn_acc_mod": 0}
-
-    return hp, armor, weapon_modifiers
-
-
-def generate_gunner():
-    hp = random.randint(50, 60)
-    armor = 1
-    weapon_modifiers = {"wpn_pwr_mod": 1,
-                        "wpn_spd_mod": 1,
-                        "wpn_acc_mod": 1}
-
-    return hp, armor, weapon_modifiers
+class Tank(Robot):
+    def __init__(self, team, weapon_type=None):
+        self.type = "Tank"
+        super().__init__(team, weapon_type)
+        self.hp = random.randint(70, 80)
+        self.armor = 3
+        self.weapon.power += 2
+        self.weapon.speed -= 1
+        # self.weapon.accuracy += 1
 
 
-def generate_assault():
-    hp = random.randint(45, 55)
-    armor = 0
-    weapon_modifiers = {"wpn_pwr_mod": 0,
-                        "wpn_spd_mod": 3,
-                        "wpn_acc_mod": -1}
+class Gunner(Robot):
+    def __init__(self, team, weapon_type=None):
+        self.type = "Support"
+        super().__init__(team, weapon_type)
+        self.hp = random.randint(50, 60)
+        self.armor = 1
+        self.weapon.power += 1
+        self.weapon.speed += 1
+        self.weapon.accuracy += 1
 
-    return hp, armor, weapon_modifiers
+
+class Assault(Robot):
+    def __init__(self, team, weapon_type=None):
+        self.type = "Support"
+        super().__init__(team, weapon_type)
+        self.hp = random.randint(45, 55)
+        self.armor = 0
+        # self.weapon.power += 1
+        self.weapon.speed += 3
+        self.weapon.accuracy -= 1
 
 
-def generate_support():
-    hp = random.randint(40, 50)
-    armor = 2
-    weapon_modifiers = {"wpn_pwr_mod": 1,
-                        "wpn_spd_mod": 0,
-                        "wpn_acc_mod": 2}
-
-    return hp, armor, weapon_modifiers
+class Support(Robot):
+    def __init__(self, team, weapon_type=None):
+        self.type = "Support"
+        super().__init__(team, weapon_type)
+        self.hp = random.randint(40, 50)
+        self.armor = 2
+        self.weapon.power += 1
+        #  self.weapon.speed += 1
+        self.weapon.accuracy += 2
 
 
 if __name__ == '__main__':
-    Robot("red", 0, 0)._describe()
-    Robot("red")._describe()
+
+    example = Support("red")
+    print(repr(example))
+
+    print("RANDOM:")
+    print(repr(globals()[robot_map[random.randint(0, 3)]]("Red")))
