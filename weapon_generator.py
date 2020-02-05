@@ -57,10 +57,10 @@ def get_random_weapon_type():
 
 def get_random_dmg_type():
     """Refer to the docstring @ mechanics.apply_status_effects()"""
-    dmg_type = ['Lava']
-                #'Frost',
-                #'Shock',
-                #'Laser']
+    dmg_type = ['Lava',
+                'Frost',
+                'Shock',
+                'Laser']
     return random.choice(dmg_type)
 
 

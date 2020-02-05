@@ -4,7 +4,7 @@ import logging
 from weapon_generator import Weapon
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 robot_map = {0: 'Tank',
              1: 'Assault',
@@ -14,12 +14,12 @@ robot_map = {0: 'Tank',
 
 class Robot:
 
-    def __init__(self, team, weapon_type=None):
+    def __init__(self, team, name, weapon_type=None):
 
         # Create core
         self.core = Core()
-        self.name = random.choice(
-            open('robot_names.txt').read().splitlines())
+
+        self.name = name
         self.team = team
 
         # Robot weapons
@@ -79,7 +79,7 @@ class Core:
 
     def stabilize(self, owner):
         # Attempt to stabilize at optimal heat
-        log.debug(f'This core is at {self.heat}')
+        log.debug(f"{owner}'s core is at {self.heat}")
         self.heat = self.heat + self.heat_generation \
             if self.heat < self.optimal_heat \
             else self.heat
@@ -97,7 +97,7 @@ class Core:
             owner.active = False
         else:
             owner.active = True
-        log.debug(f'Active is now {owner.active}')
+        log.debug(f'Active: {owner.active}')
 
     def __str__(self):
         return f"Current heat at {self.heat}"
@@ -118,10 +118,10 @@ def get_random_robot_type():
 
 
 class Tank(Robot):
-    def __init__(self, team, weapon_type=None):
+    def __init__(self, team, name, weapon_type=None):
         self.type = "Tank"
-        super().__init__(team, weapon_type)
-        self.hp = random.randint(70, 80)
+        super().__init__(team, name, weapon_type)
+        self.hp = random.randint(200, 230)
         self.armor = 3
         self.weapon.power += 2
         self.weapon.speed -= 1
@@ -129,10 +129,10 @@ class Tank(Robot):
 
 
 class Gunner(Robot):
-    def __init__(self, team, weapon_type=None):
-        self.type = "Support"
-        super().__init__(team, weapon_type)
-        self.hp = random.randint(50, 60)
+    def __init__(self, team, name, weapon_type=None):
+        self.type = "Gunner"
+        super().__init__(team, name, weapon_type)
+        self.hp = random.randint(150, 175)
         self.armor = 1
         self.weapon.power += 1
         self.weapon.speed += 1
@@ -140,10 +140,10 @@ class Gunner(Robot):
 
 
 class Assault(Robot):
-    def __init__(self, team, weapon_type=None):
-        self.type = "Support"
-        super().__init__(team, weapon_type)
-        self.hp = random.randint(45, 55)
+    def __init__(self, team, name, weapon_type=None):
+        self.type = "Assault"
+        super().__init__(team, name, weapon_type)
+        self.hp = random.randint(100, 125)
         self.armor = 0
         # self.weapon.power += 1
         self.weapon.speed += 3
@@ -151,10 +151,10 @@ class Assault(Robot):
 
 
 class Support(Robot):
-    def __init__(self, team, weapon_type=None):
+    def __init__(self, team, name, weapon_type=None):
         self.type = "Support"
-        super().__init__(team, weapon_type)
-        self.hp = random.randint(40, 50)
+        super().__init__(team, name, weapon_type)
+        self.hp = random.randint(125, 150)
         self.armor = 2
         self.weapon.power += 1
         #  self.weapon.speed += 1

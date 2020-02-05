@@ -6,14 +6,15 @@ import operator
 from itertools import compress
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 # All status effects and their messages
 # TODO: Create a separate json or something with this
 status_effects_map = {
                         "Melted": "head melted off!",
                         "Overheating": "too hot, and has to shutdown!",
-                        "Frozen": "frozen!"
+                        "Frozen": "frozen!",
+                        "Shocked": "shocked, systems malfunctioning!"
                      }
 
 
@@ -112,7 +113,7 @@ def apply_status_effects(weapon, target):
         chance = float("{:.2f}".format(random.random()))
         log.debug(f'Lava status effect rolled a {chance}')
 
-        if chance >= 0.93:
+        if chance >= 0.92:
             target.status_effects.add("Melted")
             target.core.increase_heat(250)
             target.alive = False
@@ -120,6 +121,18 @@ def apply_status_effects(weapon, target):
 
         log.debug(f'Increasing heat by 75 because of Lava')
         target.core.increase_heat(75)
+        target.check_core()
+
+    if weapon.dmg_type == "Frost":
+        chance = float("{:.2f}".format(random.random()))
+        log.debug(f'Frost status effect rolled a {chance}')
+
+        if chance >= 0.92:
+            target.status_effects.add("Frozen")
+            target.core.decrease_heat(250)
+
+        log.debug(f'Decreasing heat by 75 because of Frost')
+        target.core.decrease_heat(75)
         target.check_core()
 
 

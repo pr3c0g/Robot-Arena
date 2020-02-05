@@ -6,12 +6,15 @@ import time
 import logging
 import mechanics
 import robot_generator
+import weapon_generator
 from tabulate import tabulate
 
 
 strategy_map = {0: "Focused",
                 1: "Random"}
 robot_map = robot_generator.robot_map
+weapon_map = weapon_generator.weapon_map
+name_map = open('robot_names.txt').read().splitlines()
 
 
 # For coloring the output
@@ -33,10 +36,22 @@ class Team:
         self.strategy = strategy
         self.ai = True if player is False else False
         if self.ai is True:
-            random_type = robot_map[random.randint(0, 3)]
-            self.robots = [(getattr(robot_generator,
-                            random_type)(self.name))
-                           for _ in range(int(size))]
+
+            # Create list of random names, avoiding duplicates
+            robot_names = []
+            for _ in range(int(size)):
+                random_name = random.choice(name_map)
+                robot_names.append(random_name)
+                name_map.remove(random_name)
+
+            self.robots = [
+                (getattr(
+                    robot_generator,
+                    robot_map[random.randint(0, 3)])(
+                        self.name,
+                        robot_names[_]
+                        ))
+                for _ in range(int(size))]
         else:
             self.robots = []
             for _ in range(size):
@@ -50,11 +65,16 @@ class Team:
                                     + "1:sniper|"
                                     + "2:cannon|"
                                     + "3:handgun)")
-                type_to_generate = robot_generator.robot_map[robot_type]
-                self.robot.append(
-                    robot_generator.type_to_generate(self.name,
-                                                     weapon_type))
-                # self.robots.append(Robot(self.name, weapon_type))
+                type_to_generate = robot_map[int(robot_type)]
+                robot_name = random.choice(name_map)
+                name_map.remove(robot_name)
+                self.robots.append(
+                    getattr(
+                        robot_generator,
+                        type_to_generate)(
+                            self.name,
+                            robot_name,
+                            int(weapon_type)))
                 print(f'Creating robot {_}: {self.robots[_].name}\n')
 
         self.total_hp = sum(robot.hp for robot in self.robots)
@@ -293,7 +313,7 @@ if __name__ == '__main__':
 
     logging.basicConfig()
     log = logging.getLogger(__name__)
-    log.setLevel(logging.INFO)
+    log.setLevel(logging.DEBUG)
     log.debug(f"BEGIN DEBUG LOGGING")
     # Define battle parameters
     # max_pwrlvl = input(f'What is the max powerlevel per team? ')
@@ -302,16 +322,16 @@ if __name__ == '__main__':
 
     # Create player team based on input
     # player_team_name = input(f"What's the team color? ")
-    # strategy = int(input("Pick strategy for round:\n"
-    #                      + "0: Focused\n"
-    #                      + "1: Random\n"))
-    # player_team_name = "Blue"
-    # player_team = Team(player_team_name,
-    #                    team_size,
-    #                    max_pwrlvl,
-    #                    strategy_map[strategy],
-    #                    True)
-    # player_team.describe()
+    strategy = int(input("Pick strategy for round:\n"
+                         + "0: Focused\n"
+                         + "1: Random\n"))
+    player_team_name = "Blue"
+    player_team = Team(player_team_name,
+                       team_size,
+                       max_pwrlvl,
+                       strategy_map[strategy],
+                       True)
+    player_team.describe()
 
     # Create AI team
     red_team = Team("Red",
@@ -319,14 +339,14 @@ if __name__ == '__main__':
                     max_pwrlvl,
                     "Random",
                     False)
-    blue_team = Team("Blue",
-                     team_size,
-                     max_pwrlvl,
-                     "Random",
-                     False)
+    #blue_team = Team("Blue",
+    #                 team_size,
+    #                 max_pwrlvl,
+    #                 "Random",
+    #                 False)
 
     red_team.describe()
-    blue_team.describe()
+    #blue_team.describe()
 
     # Battle
-    Battlefield(red_team, blue_team).resolve_battle()
+    Battlefield(red_team, player_team).resolve_battle()
