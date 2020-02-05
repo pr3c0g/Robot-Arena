@@ -78,6 +78,7 @@ class Team:
                 print(f'Creating robot {_}: {self.robots[_].name}\n')
 
         self.total_hp = sum(robot.hp for robot in self.robots)
+        self.alive_robots = [x.alive for x in self.robots].count(True)
         self.acc_average = float("{:.2f}".format(sum((
             robot.weapon.accuracy for robot in self.robots))
             / len(self.robots)))
@@ -186,7 +187,9 @@ class Battlefield:
                 continue
             if robot.active is False:
                 print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
-                      f" is skipping this turn due to being disabled !")
+                      f" is skipping this turn due to being "
+                      f"{next(iter(robot.status_effects))}! "
+                      f"Core at {robot.core.heat}.")
                 continue
 
             robot_team = self.teams[1] if self.teams[1].name == robot.team \
@@ -257,8 +260,8 @@ class Battlefield:
                 for status in target.status_effects:
                     print(f"{getattr(Colors, target.team)}{target.name}"
                           f"{Colors.endc}{Colors.Yellow}"
-                          f"'s {mechanics.status_effects_map[status]}"
-                          f"{Colors.endc}",
+                          f"'s {status}"
+                          f"{Colors.endc},",
                           end=" ")
 
             if target.alive is False:
@@ -269,11 +272,12 @@ class Battlefield:
                 print(f'{target.hp} HP remains!')
 
         for team in self.teams:
+            team.alive_robots = [x.alive for x in team.robots].count(True)
             team.total_hp = sum(robot.hp for robot in team.robots)
 
         print(f'\nEnding round {round}')
         for team in self.teams:
-            print(f'{(sum([robot.alive for robot in team.robots]))} robots '
+            print(f'{team.alive_robots} robots '
                   f'on team {getattr(Colors, team.name)}'
                   f'{team.name}{Colors.endc} survived')
 
@@ -290,7 +294,7 @@ class Battlefield:
         #       because the combat can end if there are still
         #       robot.hp > 0 in some teams
 
-        while all(team.total_hp > 0 for team in self.teams):
+        while all(team.alive_robots > 0 for team in self.teams):
             self.resolve_turn(round, robots_by_speed)
             round += 1
 
@@ -301,19 +305,19 @@ class Battlefield:
         winning_team = None
         winner = 0
         for team in self.teams:
-            if team.total_hp > winner:
-                winner = team.total_hp
+            if team.alive_robots > winner:
+                winner = team.alive_robots
                 winning_team = team.name
 
         print(f'{getattr(Colors, winning_team)}\n{winning_team}'
-              f' wins with {winner} HP remaining!{Colors.endc}')
+              f' wins with {winner} robots alive remaining!{Colors.endc}')
 
 
 if __name__ == '__main__':
 
     logging.basicConfig()
     log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
+    log.setLevel(logging.INFO)
     log.debug(f"BEGIN DEBUG LOGGING")
     # Define battle parameters
     # max_pwrlvl = input(f'What is the max powerlevel per team? ')
@@ -322,7 +326,7 @@ if __name__ == '__main__':
 
     # Create player team based on input
     # player_team_name = input(f"What's the team color? ")
-    strategy = int(input("Pick strategy for round:\n"
+    strategy = int(input("Pick strategy for targetting:\n"
                          + "0: Focused\n"
                          + "1: Random\n"))
     player_team_name = "Blue"

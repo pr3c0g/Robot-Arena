@@ -6,7 +6,7 @@ import operator
 from itertools import compress
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 # All status effects and their messages
 # TODO: Create a separate json or something with this

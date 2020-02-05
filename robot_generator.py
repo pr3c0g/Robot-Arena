@@ -1,10 +1,11 @@
 #!/usr/local/opt/python/bin/python3.7
 import random
 import logging
+from mechanics import status_effects_map
 from weapon_generator import Weapon
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 robot_map = {0: 'Tank',
              1: 'Assault',
@@ -92,11 +93,28 @@ class Core:
     def check_level(self, owner):
         log.debug(f'Checking if {owner.name} robot.active has to switch, '
                   f'currently at {owner.active}')
-        if self.heat > self.heat_max_threshold \
-                or self.heat < self.heat_min_threshold:
+
+        if self.heat > self.heat_max_threshold:
+            if "Overheating" not in owner.status_effects:
+                print(f'It is now {status_effects_map["Overheating"]}')
+            owner.status_effects.add("Overheating")
+            owner.status_effects.discard("Frozen")
             owner.active = False
-        else:
-            owner.active = True
+            log.debug(f'Active: {owner.active}')
+            return
+
+        if self.heat < self.heat_min_threshold:
+            if "Frozen" not in owner.status_effects:
+                print(f'It is now {status_effects_map["Frozen"]}')
+            owner.status_effects.add("Frozen")
+            owner.status_effects.discard("Overheating")
+            owner.active = False
+            log.debug(f'Active: {owner.active}')
+            return
+
+        owner.status_effects.discard("Frozen")
+        owner.status_effects.discard("Overheating")
+        owner.active = True
         log.debug(f'Active: {owner.active}')
 
     def __str__(self):
@@ -163,8 +181,8 @@ class Support(Robot):
 
 if __name__ == '__main__':
 
-    example = Support("red")
+    example = Support("red", "Bot")
     print(repr(example))
 
     print("RANDOM:")
-    print(repr(globals()[robot_map[random.randint(0, 3)]]("Red")))
+    print(repr(globals()[robot_map[random.randint(0, 3)]]("Red", "RandomBot")))
