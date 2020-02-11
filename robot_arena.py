@@ -149,9 +149,15 @@ class Battlefield:
         print(f'The distance betweeen teams is {self.distance}')
 
     def resolve_turn(self, round, robots):
-        """ The turn is divided into 4 phases:
+        """ This function receives the robots already ordered by speed
+        So all iterators begin with the fastest robot.
+
+        The turn is divided into 4 phases:
         Beggining of turn   1 - Stabilize core
                             2 - Cooldown weapons
+                            3 - Check status effects besides
+                            heat level ones
+                            4 - Present summary
 
         Combat phase        1 - check team strategy
                             2 - define target based on strategy
@@ -159,7 +165,7 @@ class Battlefield:
                             4 - check hit or miss
                             5 - resolve damage + status effects
 
-        Ending of turn      - Check total hp in teams
+        Ending of turn      1 - Check total hp in teams
         """
 
         print(f'{Colors.bold}\nStarting round {round}{Colors.endc}')
@@ -167,12 +173,38 @@ class Battlefield:
         # Beggining of turn:
         alive_robots = (x for x in robots if x.alive is True)
 
+        round_table = []
         for robot in alive_robots:
             # 1 - Stabilize core
             robot.core.stabilize(robot)
             # 2 - Cooldown weapons
             robot.weapon.cooldown = robot.weapon.cooldown - 1 \
                 if robot.weapon.cooldown > 0 else 0
+            # 3 - Remove Shocked status effects
+            if "Shocked" in robot.status_effects:
+                robot.status_effects.discard("Shocked")
+                robot.active = True
+            # 4 - Prepare for Summary
+            round_table.append((robot.team,
+                                robot.name,
+                                robot.hp,
+                                robot.active,
+                                (robot.status_effects
+                                    if len(robot.status_effects) > 0
+                                    else "None"),
+                                robot.core.heat))
+
+        # Show robots that will skip the turn and explain why
+        print(f'{Colors.bold}Robots for this round summary:'
+              f'{round}{Colors.endc}')
+        # Sort the list by team color before printing
+        round_table.sort(key=lambda tuple: tuple[0])
+        print(tabulate(round_table, headers=['Team',
+                                             'Name',
+                                             'HP',
+                                             'Active',
+                                             'Status Effects',
+                                             'Heat'], tablefmt="fancy_grid"))
 
         input(f"Ready for combat?\n")
 
@@ -181,8 +213,6 @@ class Battlefield:
             log.debug(f"{robot.name} is resolving his turn..")
             # time.sleep(1)
 
-            # Show robots that will skip the turn but explain why
-            # TODO: A table would be nice
             if robot.alive is False:
                 continue
             if robot.active is False:
@@ -326,16 +356,16 @@ if __name__ == '__main__':
 
     # Create player team based on input
     # player_team_name = input(f"What's the team color? ")
-    strategy = int(input("Pick strategy for targetting:\n"
-                         + "0: Focused\n"
-                         + "1: Random\n"))
-    player_team_name = "Blue"
-    player_team = Team(player_team_name,
-                       team_size,
-                       max_pwrlvl,
-                       strategy_map[strategy],
-                       True)
-    player_team.describe()
+    #strategy = int(input("Pick strategy for targetting:\n"
+    #                     + "0: Focused\n"
+    #                     + "1: Random\n"))
+    #player_team_name = "Blue"
+    #player_team = Team(player_team_name,
+    #                   team_size,
+    #                   max_pwrlvl,
+    #                   strategy_map[strategy],
+    #                   True)
+    #player_team.describe()
 
     # Create AI team
     red_team = Team("Red",
@@ -343,14 +373,14 @@ if __name__ == '__main__':
                     max_pwrlvl,
                     "Random",
                     False)
-    #blue_team = Team("Blue",
-    #                 team_size,
-    #                 max_pwrlvl,
-    #                 "Random",
-    #                 False)
+    blue_team = Team("Blue",
+                     team_size,
+                     max_pwrlvl,
+                     "Random",
+                     False)
 
     red_team.describe()
-    #blue_team.describe()
+    blue_team.describe()
 
     # Battle
-    Battlefield(red_team, player_team).resolve_battle()
+    Battlefield(red_team, blue_team).resolve_battle()

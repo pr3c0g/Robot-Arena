@@ -114,6 +114,10 @@ class Core:
 
         owner.status_effects.discard("Frozen")
         owner.status_effects.discard("Overheating")
+
+        if "Shocked" in owner.status_effects:
+            return
+
         owner.active = True
         log.debug(f'Active: {owner.active}')
 

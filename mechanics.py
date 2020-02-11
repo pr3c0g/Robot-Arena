@@ -108,6 +108,16 @@ def apply_status_effects(weapon, target):
     Frost   - causes cold and has a chance to freeze the target
     """
 
+    if weapon.dmg_type == "Shock":
+        # TODO: Check resistance to damage type before melting
+        chance = float("{:.2f}".format(random.random()))
+        log.debug(f'Shock status effect rolled a {chance}')
+
+        if chance >= 0.85:
+            target.status_effects.add("Shocked")
+            target.active = False
+            return
+
     if weapon.dmg_type == "Lava":
         # TODO: Check resistance to damage type before melting
         chance = float("{:.2f}".format(random.random()))
@@ -119,20 +129,25 @@ def apply_status_effects(weapon, target):
             target.alive = False
             return
 
-        log.debug(f'Increasing heat by 75 because of Lava')
-        target.core.increase_heat(75)
+        log.debug(f'Increasing heat by 50 because of Lava')
+        target.core.increase_heat(50)
         target.check_core()
 
     if weapon.dmg_type == "Frost":
         chance = float("{:.2f}".format(random.random()))
         log.debug(f'Frost status effect rolled a {chance}')
 
-        if chance >= 0.92:
+        if chance >= 0.85:
             target.status_effects.add("Frozen")
             target.core.decrease_heat(250)
 
-        log.debug(f'Decreasing heat by 75 because of Frost')
-        target.core.decrease_heat(75)
+        log.debug(f'Decreasing heat by 50 because of Frost')
+        target.core.decrease_heat(50)
+        target.check_core()
+
+    if weapon.dmg_type == "Laser":
+        log.debug(f'Increasing heat by 25 because of Frost')
+        target.core.decrease_heat(25)
         target.check_core()
 
 
