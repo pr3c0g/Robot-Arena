@@ -306,6 +306,7 @@ class Battlefield:
             team.total_hp = sum(robot.hp for robot in team.robots)
 
         print(f'\nEnding round {round}')
+        input()
         for team in self.teams:
             print(f'{team.alive_robots} robots '
                   f'on team {getattr(Colors, team.name)}'
@@ -356,16 +357,16 @@ if __name__ == '__main__':
 
     # Create player team based on input
     # player_team_name = input(f"What's the team color? ")
-    #strategy = int(input("Pick strategy for targetting:\n"
-    #                     + "0: Focused\n"
-    #                     + "1: Random\n"))
-    #player_team_name = "Blue"
-    #player_team = Team(player_team_name,
-    #                   team_size,
-    #                   max_pwrlvl,
-    #                   strategy_map[strategy],
-    #                   True)
-    #player_team.describe()
+    strategy = int(input("Pick strategy for targetting:\n"
+                         + "0: Focused\n"
+                         + "1: Random\n"))
+    player_team_name = "Blue"
+    player_team = Team(player_team_name,
+                       team_size,
+                       max_pwrlvl,
+                       strategy_map[strategy],
+                       True)
+    player_team.describe()
 
     # Create AI team
     red_team = Team("Red",
@@ -373,14 +374,14 @@ if __name__ == '__main__':
                     max_pwrlvl,
                     "Random",
                     False)
-    blue_team = Team("Blue",
-                     team_size,
-                     max_pwrlvl,
-                     "Random",
-                     False)
+    #blue_team = Team("Blue",
+    #                 team_size,
+    #                 max_pwrlvl,
+    #                 "Random",
+    #                 False)
 
     red_team.describe()
-    blue_team.describe()
+    #blue_team.describe()
 
     # Battle
-    Battlefield(red_team, blue_team).resolve_battle()
+    Battlefield(red_team, player_team).resolve_battle()
