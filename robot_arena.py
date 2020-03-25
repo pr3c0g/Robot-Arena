@@ -7,6 +7,7 @@ import logging
 import mechanics
 import robot_generator
 import weapon_generator
+from itertools import compress
 from tabulate import tabulate
 
 
@@ -30,12 +31,13 @@ class Colors:
 
 class Team:
 
-    def __init__(self, name, size, max_pwrlvl, strategy, player=False):
+    def __init__(self, name, size, max_pwrlvl, strategy,
+                 random_robots=True, player=False):
 
         self.name = name
         self.strategy = strategy
         self.ai = True if player is False else False
-        if self.ai is True:
+        if self.ai is True or random_robots is True:
 
             # Create list of random names, avoiding duplicates
             robot_names = []
@@ -159,9 +161,9 @@ class Battlefield:
                             heat level ones
                             4 - Present summary
 
-        Combat phase        1 - check team strategy
-                            2 - define target based on strategy
-                            3 - check weapon cooldown
+        Combat phase        1 - check weapon cooldown
+                            2 - check team strategy
+                            3 - define target based on strategy
                             4 - check hit or miss
                             5 - resolve damage + status effects
 
@@ -189,7 +191,7 @@ class Battlefield:
                                 robot.name,
                                 robot.hp,
                                 robot.active,
-                                (robot.status_effects
+                                (",".join(robot.status_effects)
                                     if len(robot.status_effects) > 0
                                     else "None"),
                                 robot.core.heat))
@@ -227,24 +229,35 @@ class Battlefield:
             target_team = self.teams[0] if self.teams[1].name == robot.team \
                 else self.teams[1]
 
-            # 1 - check team strategy
-            strat = getattr(mechanics, "strategy_"
-                            + str.lower(robot_team.strategy))
-            # 2 - define target based on strategy
-            target = strat(robot_team,
-                           robot,
-                           target_team,
-                           self.teams)
-            if target is None:  # If there's no more targets end the round
-                print(f'{robot.team} has no more targets')
-                break
-
-            # 3 - check weapon cooldown
+            # 1 - check weapon cooldown
             if robot.weapon.cooldown > 0:
                 print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
                       f"'s weapon is cooling down, "
                       f"{robot.weapon.cooldown} turns remaining.")
                 continue
+
+            if robot_team.ai is False:
+                print(f'Choose target for {robot.name} ..')
+
+                available_targets = [robot for robot in target_team.robots
+                                     if robot.alive is True]
+
+                for i, r in enumerate(available_targets):
+                    print(f'{i} - {r.name}')
+                choice = int(input("\n"))
+                target = target_team.robots[choice]
+            else:
+                # 2 - check team strategy
+                strat = getattr(mechanics, "strategy_"
+                                + str.lower(robot_team.strategy))
+                # 3 - define target based on strategy
+                target = strat(robot_team,
+                               robot,
+                               target_team,
+                               self.teams)
+            if target is None:  # If there's no more targets end the round
+                print(f'{robot.team} has no more targets')
+                break
 
             print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
                   f" attacks {getattr(Colors, target.team)}"
@@ -354,7 +367,8 @@ if __name__ == '__main__':
     # max_pwrlvl = input(f'What is the max powerlevel per team? ')
     max_pwrlvl = 100
     team_size = int(input(f'What is the number of robots per team? '))
-
+    random_robots_choice = input(f'Random robots? y/n ')
+    random_robots = True if random_robots_choice == "y" else False
     # Create player team based on input
     # player_team_name = input(f"What's the team color? ")
     strategy = int(input("Pick strategy for targetting:\n"
@@ -365,6 +379,7 @@ if __name__ == '__main__':
                        team_size,
                        max_pwrlvl,
                        strategy_map[strategy],
+                       random_robots,
                        True)
     player_team.describe()
 

@@ -62,7 +62,7 @@ def strategy_focused(active_team, active_robot, target_team, teams):
                   f"the lowest HP from all the live ones")
         target = min(robot.hp for robot in available_targets)
     else:
-        log.debug(f"There's noone else  alive in the target team")
+        log.debug(f"There's noone else alive in the target team")
         target = None
     return target
 
