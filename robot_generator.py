@@ -133,8 +133,6 @@ class Core:
                 f'GEN:{self.heat_generation}')
 
 
-# TODO: The following functions should eventually be replaced
-# with class inheritance
 def get_random_robot_type():
     return robot_map[random.randint(0, 3)]
 
