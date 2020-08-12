@@ -1,4 +1,5 @@
-#!/usr/local/opt/python/bin/python3.7
+#!/usr/bin/env python
+
 import random
 import operator
 import functools
@@ -29,6 +30,20 @@ class Colors:
     underline = '\033[4m'
 
 
+def user_input_validation(question, choices):
+    print(question)
+    while True:
+       print(choices)
+       choice = input()
+       try:
+           choice = int(choice)
+           if choice in choices:
+               return choice
+       except:
+           pass
+       print("Pick a valid choice")
+    
+
 class Team:
 
     def __init__(self, name, size, max_pwrlvl, strategy,
@@ -57,16 +72,8 @@ class Team:
         else:
             self.robots = []
             for _ in range(size):
-                robot_type = input("Pick robot type: "
-                                   + "0:tank|"
-                                   + "1:assault|"
-                                   + "2:support|"
-                                   + "3:gunner)")
-                weapon_type = input("Pick weapon type: "
-                                    + "0:rifle|"
-                                    + "1:sniper|"
-                                    + "2:cannon|"
-                                    + "3:handgun)")
+                robot_type = user_input_validation("Pick robot type:", robot_map)
+                weapon_type = user_input_validation("Pick weapon type:", weapon_map)
                 type_to_generate = robot_map[int(robot_type)]
                 robot_name = random.choice(name_map)
                 name_map.remove(robot_name)
@@ -150,31 +157,16 @@ class Battlefield:
         self.distance = random.randint(1, 10)
         print(f'The distance betweeen teams is {self.distance}')
 
-    def resolve_turn(self, round, robots):
-        """ This function receives the robots already ordered by speed
-        So all iterators begin with the fastest robot.
-
-        The turn is divided into 4 phases:
-        Beggining of turn   1 - Stabilize core
-                            2 - Cooldown weapons
-                            3 - Check status effects besides
-                            heat level ones
-                            4 - Present summary
-
-        Combat phase        1 - check weapon cooldown
-                            2 - check team strategy
-                            3 - define target based on strategy
-                            4 - check hit or miss
-                            5 - resolve damage + status effects
-
-        Ending of turn      1 - Check total hp in teams
+    def prepare_turn(self, round, robots):
+        """ Recreate alive_robots and begin turn
+            Beggining of turn   1 - Stabilize core
+                                2 - Cooldown weapons
+                                3 - Check status effects besides
+                                    heat level ones
+                                4 - Present summary
         """
 
-        print(f'{Colors.bold}\nStarting round {round}{Colors.endc}')
-
-        # Beggining of turn:
         alive_robots = (x for x in robots if x.alive is True)
-
         round_table = []
         for robot in alive_robots:
             # 1 - Stabilize core
@@ -208,13 +200,31 @@ class Battlefield:
                                              'Status Effects',
                                              'Heat'], tablefmt="fancy_grid"))
 
+        
+    def resolve_turn(self, round, robots):
+        """ This function receives the robots already ordered by speed
+        So all iterators begin with the fastest robot.
+
+
+        Combat phase        1 - check weapon cooldown
+                            2 - check team strategy
+                            3 - define target based on strategy
+                            4 - check hit or miss
+                            5 - resolve damage + status effects
+
+        Ending of turn      1 - Check total hp in teams
+        """
+
+        self.prepare_turn(round, robots)
+
+        print(f'{Colors.bold}\nStarting round {round}{Colors.endc}')
+
         input(f"Ready for combat?\n")
 
         # Combat phase
         for robot in robots:
             log.debug(f"{robot.name} is resolving his turn..")
             # time.sleep(1)
-
             if robot.alive is False:
                 continue
             if robot.active is False:
@@ -229,6 +239,9 @@ class Battlefield:
             target_team = self.teams[0] if self.teams[1].name == robot.team \
                 else self.teams[1]
 
+            if all(robot.alive is False for robot in target_team.robots):
+                continue
+
             # 1 - check weapon cooldown
             if robot.weapon.cooldown > 0:
                 print(f"{getattr(Colors, robot.team)}{robot.name}{Colors.endc}"
@@ -239,13 +252,16 @@ class Battlefield:
             if robot_team.ai is False:
                 print(f'Choose target for {robot.name} ..')
 
-                available_targets = [robot for robot in target_team.robots
-                                     if robot.alive is True]
+                # available_targets = [robot for robot in target_team.robots
+                                     # if robot.alive is True]
+                available_targets = {i: robot for (i, robot) in enumerate(target_team.robots)
+                                     if robot.alive is True}
 
-                for i, r in enumerate(available_targets):
-                    print(f'{i} - {r.name}')
-                choice = int(input("\n"))
-                target = target_team.robots[choice]
+                # for i, r in enumerate(available_targets):
+                    # print(f'{i} - {r.name}')
+                choice = user_input_validation("", available_targets)
+                print(choice)
+                target = available_targets[choice]
             else:
                 # 2 - check team strategy
                 strat = getattr(mechanics, "strategy_"
@@ -371,10 +387,8 @@ if __name__ == '__main__':
     random_robots = True if random_robots_choice == "y" else False
     # Create player team based on input
     # player_team_name = input(f"What's the team color? ")
-    strategy = int(input("Pick strategy for targetting:\n"
-                         + "0: Focused\n"
-                         + "1: Random\n"))
     player_team_name = "Blue"
+    strategy = user_input_validation("Pick strategy for targetting:", strategy_map)
     player_team = Team(player_team_name,
                        team_size,
                        max_pwrlvl,
@@ -389,14 +403,14 @@ if __name__ == '__main__':
                     max_pwrlvl,
                     "Random",
                     False)
-    #blue_team = Team("Blue",
-    #                 team_size,
-    #                 max_pwrlvl,
-    #                 "Random",
-    #                 False)
+    # blue_team = Team("Blue",
+    #                  team_size,
+    #                  max_pwrlvl,
+    #                  "Random",
+    #                  False)
 
     red_team.describe()
-    #blue_team.describe()
+    # blue_team.describe()
 
     # Battle
     Battlefield(red_team, player_team).resolve_battle()
