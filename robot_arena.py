@@ -401,7 +401,7 @@ if __name__ == '__main__':
     red_team = Team("Red",
                     team_size,
                     max_pwrlvl,
-                    "Random",
+                    strategy_map[strategy],
                     False)
     # blue_team = Team("Blue",
     #                  team_size,
